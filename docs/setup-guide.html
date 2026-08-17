@@ -262,6 +262,27 @@
           <strong>Windows PowerShell</strong> (Windows&nbsp;10). Every command in
           this guide goes in that window.
         </p>
+        <div class="note stop">
+          <span class="lbl">Check you're not in Command Prompt</span>
+          <p>
+            Windows has two lookalike terminals and only one of them works here.
+            Look at your prompt:
+          </p>
+          <pre><b>PS</b> C:\Users\you&gt;      <span class="c">&lt;- PowerShell. Correct.</span>
+C:\Users\you&gt;         <span class="c">&lt;- Command Prompt. Wrong - close it.</span></pre>
+          <p>
+            If the <code>PS</code> is missing you're in Command Prompt, and roughly
+            half the commands below will fail with confusing errors. Close it and
+            open Terminal or Windows PowerShell instead.
+          </p>
+        </div>
+        <div class="note warn">
+          <span class="lbl">Do the steps in order</span>
+          <p>
+            Each step depends on the one before it. Step 12 in particular can't work
+            until steps 4 and 5 have downloaded and installed the project.
+          </p>
+        </div>
         <div class="note">
           <span class="lbl">Keep one window open</span>
           <p>
@@ -322,6 +343,15 @@
         </p>
         <pre><span class="p">&gt;</span> Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned</pre>
         <p>Answer <strong>Y</strong> when it asks.</p>
+        <div class="note warn">
+          <span class="lbl">Wait for prompts to finish</span>
+          <p>
+            When any command asks <code>[Y] Yes [N] No:</code>, type
+            <strong>Y</strong> and press Enter before pasting anything else. Paste a
+            command into that prompt and it gets swallowed as your answer — it never
+            runs, and nothing tells you so.
+          </p>
+        </div>
         <p>
           This affects your user account, not the whole machine, and only permits
           scripts you wrote locally — downloaded scripts still need to be signed.
@@ -594,6 +624,26 @@
     </div>
 
     <div class="trouble">
+      <details>
+        <summary>“The system cannot find the path specified”</summary>
+        <div class="details-body">
+          <p>
+            You're either in the wrong folder or the project isn't downloaded yet.
+            Check both:
+          </p>
+          <pre><span class="p">&gt;</span> cd $HOME\Coeus-Search
+<span class="p">&gt;</span> dir</pre>
+          <p>
+            You should see <code>fbmarket</code>, <code>deploy</code> and
+            <code>config.example.yaml</code>. If <code>cd</code> itself fails, step 4
+            hasn't run — go back and clone the repository.
+          </p>
+          <p>
+            Also confirm your prompt starts with <code>PS</code>. In Command Prompt,
+            <code>.\deploy\install-windows-task.ps1</code> cannot run at all.
+          </p>
+        </div>
+      </details>
       <details>
         <summary>“running scripts is disabled on this system”</summary>
         <div class="details-body">
