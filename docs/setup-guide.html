@@ -1,0 +1,650 @@
+<title>fbmarket Setup</title>
+<style>
+  /* Cold instrument housing, one warm indicator lamp.
+     Neutrals are biased blue-grey so the amber accent is the only warm thing. */
+  :root {
+    --paper:      #E8EBEF;
+    --surface:    #F9FAFB;
+    --sunken:     #DFE3E9;
+    --ink:        #171B21;
+    --muted:      #5C6673;
+    --line:       #CFD5DE;
+    --accent:     #A65A05;
+    --accent-ink: #A65A05;
+    --accent-soft:rgba(166,90,5,.10);
+    --ok:         #1B6B45;
+    --ok-soft:    rgba(27,107,69,.10);
+    --warn:       #8A4B00;
+    --warn-soft:  rgba(180,110,20,.12);
+    --danger:     #A32017;
+    --danger-soft:rgba(163,32,23,.09);
+
+    /* The terminal keeps one look in both themes, like a real one. */
+    --term-bg:    #12161C;
+    --term-ink:   #DCE3EC;
+    --term-dim:   #7C8A9C;
+    --term-accent:#F0A44A;
+    --term-line:  #232B35;
+
+    --display: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --prose: Charter, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #12151A;
+      --surface:    #1A1F26;
+      --sunken:     #0D1015;
+      --ink:        #E6EAF0;
+      --muted:      #94A0B0;
+      --line:       #2A313B;
+      --accent:     #F0A44A;
+      --accent-ink: #F5B871;
+      --accent-soft:rgba(240,164,74,.12);
+      --ok:         #4FCF8E;
+      --ok-soft:    rgba(79,207,142,.12);
+      --warn:       #F0A44A;
+      --warn-soft:  rgba(240,164,74,.12);
+      --danger:     #FF8A7E;
+      --danger-soft:rgba(255,138,126,.11);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:      #12151A;
+    --surface:    #1A1F26;
+    --sunken:     #0D1015;
+    --ink:        #E6EAF0;
+    --muted:      #94A0B0;
+    --line:       #2A313B;
+    --accent:     #F0A44A;
+    --accent-ink: #F5B871;
+    --accent-soft:rgba(240,164,74,.12);
+    --ok:         #4FCF8E;
+    --ok-soft:    rgba(79,207,142,.12);
+    --warn:       #F0A44A;
+    --warn-soft:  rgba(240,164,74,.12);
+    --danger:     #FF8A7E;
+    --danger-soft:rgba(255,138,126,.11);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--prose);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell { max-width: 780px; margin: 0 auto; padding: 0 22px 96px; }
+
+  /* ---- masthead ---- */
+  .masthead { padding: 56px 0 30px; border-bottom: 2px solid var(--ink); }
+  .kicker {
+    font-family: var(--display);
+    font-size: 11.5px; font-weight: 700;
+    letter-spacing: .16em; text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(34px, 6.2vw, 50px);
+    font-weight: 800; letter-spacing: -.03em; line-height: 1.03;
+    margin: 0 0 16px; text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 18.5px; color: var(--muted); margin: 0; max-width: 60ch;
+  }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 10px 24px;
+    margin-top: 26px; font-family: var(--display); font-size: 13px; color: var(--muted);
+  }
+  .meta b { color: var(--ink); font-weight: 650; }
+
+  /* ---- phases ---- */
+  .phase { margin-top: 54px; }
+  .phase-head {
+    display: flex; align-items: baseline; gap: 12px;
+    padding-bottom: 10px; margin-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .phase-head h2 {
+    font-family: var(--display); font-size: 21px; font-weight: 750;
+    letter-spacing: -.02em; margin: 0; text-wrap: balance;
+  }
+  .phase-head .of {
+    font-family: var(--display); font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    margin-left: auto; white-space: nowrap;
+  }
+
+  /* ---- steps ---- */
+  .step { display: grid; grid-template-columns: 44px 1fr; gap: 18px; padding: 26px 0 4px; }
+  .num {
+    font-family: var(--display);
+    font-size: 19px; font-weight: 750;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent-ink);
+    border-top: 3px solid var(--accent);
+    padding-top: 7px;
+    line-height: 1;
+  }
+  .step h3 {
+    font-family: var(--display); font-size: 19px; font-weight: 700;
+    letter-spacing: -.015em; margin: 0 0 10px; text-wrap: balance;
+  }
+  .step > div > p { margin: 0 0 13px; }
+  .step > div > p:last-child { margin-bottom: 0; }
+
+  /* ---- terminal ---- */
+  pre {
+    background: var(--term-bg); color: var(--term-ink);
+    border: 1px solid var(--term-line); border-radius: 9px;
+    padding: 15px 17px; margin: 0 0 14px;
+    overflow-x: auto;
+    font-family: var(--mono); font-size: 13.5px; line-height: 1.72;
+    tab-size: 2;
+  }
+  pre .c { color: var(--term-dim); }         /* comment */
+  pre .p { color: var(--term-accent); }      /* prompt marker */
+  pre b  { color: #fff; font-weight: 600; }
+
+  code {
+    font-family: var(--mono); font-size: .87em;
+    background: var(--sunken); border: 1px solid var(--line);
+    border-radius: 5px; padding: 1px 5px;
+  }
+
+  /* ---- os switch ---- */
+  .os { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  .os-row { border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--surface); }
+  .os-tag {
+    font-family: var(--display); font-size: 11px; font-weight: 700;
+    letter-spacing: .11em; text-transform: uppercase; color: var(--muted);
+    padding: 8px 13px; background: var(--sunken); border-bottom: 1px solid var(--line);
+  }
+  .os-row pre { border: 0; border-radius: 0; margin: 0; }
+
+  /* ---- callouts ---- */
+  .note {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 8px 8px 0;
+    padding: 13px 16px; margin: 0 0 14px;
+    font-size: 15.5px;
+  }
+  .note.check { border-left-color: var(--ok); background: var(--ok-soft); }
+  .note.warn  { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note.stop  { border-left-color: var(--danger); background: var(--danger-soft); }
+  .note p { margin: 0 0 9px; }
+  .note p:last-child { margin-bottom: 0; }
+  .note .lbl {
+    display: block; font-family: var(--display);
+    font-size: 10.5px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .note.check .lbl { color: var(--ok); }
+  .note.warn  .lbl { color: var(--warn); }
+  .note.stop  .lbl { color: var(--danger); }
+  .note:not(.check):not(.warn):not(.stop) .lbl { color: var(--accent-ink); }
+
+  /* ---- misc ---- */
+  a { color: var(--accent-ink); text-underline-offset: 2.5px; text-decoration-thickness: 1px; }
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px;
+  }
+  ul { margin: 0 0 14px; padding-left: 20px; }
+  li { margin-bottom: 7px; }
+  li:last-child { margin-bottom: 0; }
+  strong { font-weight: 650; }
+
+  .trouble { margin-top: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  details { border-bottom: 1px solid var(--line); }
+  details:last-child { border-bottom: 0; }
+  summary {
+    cursor: pointer; padding: 14px 17px; list-style: none;
+    font-family: var(--display); font-size: 15.5px; font-weight: 650;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before {
+    content: "+"; color: var(--accent-ink); font-weight: 700;
+    display: inline-block; width: 17px;
+  }
+  details[open] summary::before { content: "–"; }
+  .details-body { padding: 0 17px 16px 34px; font-size: 15.5px; }
+  .details-body p { margin: 0 0 11px; }
+  .details-body p:last-child { margin-bottom: 0; }
+  .details-body pre { font-size: 12.8px; }
+
+  footer {
+    margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--line);
+    font-family: var(--display); font-size: 13.5px; color: var(--muted);
+  }
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <p class="kicker">Facebook Marketplace car monitor</p>
+    <h1>Getting fbmarket running</h1>
+    <p class="standfirst">
+      From an empty terminal to your phone buzzing when a car you actually want
+      hits Marketplace. Eleven steps, four checkpoints, about twenty minutes.
+    </p>
+    <div class="meta">
+      <span><b>Time</b> ~20 min</span>
+      <span><b>You need</b> a computer that stays on</span>
+      <span><b>Alerts go to</b> Discord</span>
+    </div>
+  </header>
+
+  <!-- ================= PHASE 1 ================= -->
+  <section class="phase">
+    <div class="phase-head">
+      <h2>Install it</h2>
+      <span class="of">Steps 1–4</span>
+    </div>
+
+    <div class="step">
+      <div class="num">1</div>
+      <div>
+        <h3>Check you have Python 3.10 or newer</h3>
+        <p>Open a terminal (on Windows, use <strong>PowerShell</strong>) and run:</p>
+        <pre><span class="p">$</span> python3 --version</pre>
+        <p>If it prints <code>3.10</code> or higher, skip ahead. Otherwise install it:</p>
+        <div class="os">
+          <div class="os-row">
+            <div class="os-tag">macOS</div>
+            <pre><span class="p">$</span> brew install python
+<span class="c"># no Homebrew? download from python.org/downloads</span></pre>
+          </div>
+          <div class="os-row">
+            <div class="os-tag">Windows</div>
+            <pre><span class="c"># Download from python.org/downloads and run the installer.</span>
+<span class="c"># Tick "Add python.exe to PATH" on the first screen — easy to miss,</span>
+<span class="c"># and nothing below works without it.</span></pre>
+          </div>
+          <div class="os-row">
+            <div class="os-tag">Linux / Raspberry Pi</div>
+            <pre><span class="p">$</span> sudo apt update
+<span class="p">$</span> sudo apt install python3 python3-venv python3-pip git</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">2</div>
+      <div>
+        <h3>Download the code</h3>
+        <pre><span class="p">$</span> git clone https://github.com/Nickyd36555/Coeus-Search.git
+<span class="p">$</span> cd Coeus-Search</pre>
+        <p>Every command from here on runs inside that folder.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">3</div>
+      <div>
+        <h3>Create an isolated environment and install</h3>
+        <p>
+          The virtual environment keeps this project's packages away from the rest
+          of your system, so nothing here can break anything else.
+        </p>
+        <div class="os">
+          <div class="os-row">
+            <div class="os-tag">macOS / Linux</div>
+            <pre><span class="p">$</span> python3 -m venv .venv
+<span class="p">$</span> source .venv/bin/activate
+<span class="p">$</span> pip install -e ".[web]"</pre>
+          </div>
+          <div class="os-row">
+            <div class="os-tag">Windows PowerShell</div>
+            <pre><span class="p">&gt;</span> python -m venv .venv
+<span class="p">&gt;</span> .venv\Scripts\Activate.ps1
+<span class="p">&gt;</span> pip install -e ".[web]"</pre>
+          </div>
+        </div>
+        <div class="note check">
+          <span class="lbl">Checkpoint</span>
+          <p>
+            Your prompt should now start with <code>(.venv)</code>. Confirm the tool
+            is installed:
+          </p>
+          <pre><span class="p">$</span> fbmarket --version
+<b>fbmarket 1.0.0</b></pre>
+          <p>
+            If your terminal says <code>fbmarket: command not found</code>, the
+            environment isn't active — re-run the <code>activate</code> line above.
+            You need it in <em>every</em> new terminal window.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">4</div>
+      <div>
+        <h3>Install the browser it drives</h3>
+        <p>
+          Marketplace only renders its listings for a real browser, so the tool
+          drives a headless Chromium. This downloads it (~150&nbsp;MB, once).
+        </p>
+        <pre><span class="p">$</span> playwright install chromium</pre>
+        <p>On Linux or a Raspberry Pi, also install the system libraries it needs:</p>
+        <pre><span class="p">$</span> sudo playwright install-deps chromium</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PHASE 2 ================= -->
+  <section class="phase">
+    <div class="phase-head">
+      <h2>Connect your alerts</h2>
+      <span class="of">Steps 5–6</span>
+    </div>
+
+    <div class="step">
+      <div class="num">5</div>
+      <div>
+        <h3>Create a fresh Discord webhook</h3>
+        <div class="note stop">
+          <span class="lbl">Do this one properly</span>
+          <p>
+            The webhook you sent me is in our chat transcript, which means it should
+            be considered compromised — anyone holding that URL can post into your
+            channel. Make a new one and don't paste it into a chat again.
+          </p>
+        </div>
+        <p>
+          In Discord: <strong>Server Settings → Integrations → Webhooks → New
+          Webhook</strong>. Pick the channel you want car alerts in, then
+          <strong>Copy Webhook URL</strong>.
+        </p>
+        <p>Now create a file called <code>.env</code> in the project folder:</p>
+        <pre><span class="c"># .env</span>
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/PASTE_YOURS_HERE</pre>
+        <p>
+          That file is already git-ignored, so the secret can't get pushed to GitHub
+          by accident. The tool loads it automatically.
+        </p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">6</div>
+      <div>
+        <h3>Switch Discord on and prove it works</h3>
+        <p>Copy the example config:</p>
+        <pre><span class="p">$</span> cp config.example.yaml config.yaml</pre>
+        <p>
+          Open <code>config.yaml</code> in any text editor. Find the
+          <code>discord</code> block and change <code>enabled: false</code> to
+          <code>enabled: true</code>:
+        </p>
+        <pre>    - type: discord
+      enabled: <b>true</b>
+      webhook_url: ${DISCORD_WEBHOOK_URL}</pre>
+        <p>Then check the config is valid and fire a test alert:</p>
+        <pre><span class="p">$</span> fbmarket check
+<span class="p">$</span> fbmarket test-notify</pre>
+        <div class="note check">
+          <span class="lbl">Checkpoint</span>
+          <p>
+            A fake Tacoma listing should appear in your Discord channel within a
+            couple of seconds. <strong>Don't move on until it does</strong> — every
+            later step assumes alerts reach you.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PHASE 3 ================= -->
+  <section class="phase">
+    <div class="phase-head">
+      <h2>Tell it what to hunt</h2>
+      <span class="of">Steps 7–9</span>
+    </div>
+
+    <div class="step">
+      <div class="num">7</div>
+      <div>
+        <h3>Open the interface</h3>
+        <pre><span class="p">$</span> fbmarket web</pre>
+        <p>
+          Go to <strong>http://127.0.0.1:8765</strong> in your browser. The example
+          config ships with three placeholder searches pointed at Salt Lake City —
+          delete or edit them once yours is set up.
+        </p>
+        <p>
+          Click <strong>+ New search</strong> and fill in the car, your price range,
+          year range and mileage limit.
+        </p>
+        <div class="note">
+          <span class="lbl">The one field that trips people up</span>
+          <p>
+            <strong>Location.</strong> Open Facebook Marketplace in another tab and
+            look at the address bar. Copy the part straight after
+            <code>/marketplace/</code> — it'll be either a city name like
+            <code>manchester</code> or a long number like
+            <code>109470862423276</code>. That exact value goes in the Location box.
+          </p>
+        </div>
+        <p>
+          Fill in <strong>Reject if the listing mentions…</strong> generously —
+          <code>salvage, rebuilt, parts only, no title, wanted, lease</code>. This is
+          what stops junk alerts. Then <strong>Save search</strong>.
+        </p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">8</div>
+      <div>
+        <h3>Test the search and tune it</h3>
+        <p>
+          Press <strong>Test</strong> next to your new search. It checks Marketplace
+          live and shows every car on the page with a verdict on each — either
+          <em>would alert you</em>, or the exact rule that rejected it, like
+          <em>skipped — price 26,900 &gt; 25,000</em>.
+        </p>
+        <p>
+          Adjust and re-test until the right cars pass. This is the whole point of
+          the Test button: no guessing why you're getting junk or nothing at all.
+        </p>
+        <div class="note warn">
+          <span class="lbl">If you get zero listings</span>
+          <p>
+            Facebook may have shown a login wall. Stop the server
+            (<code>Ctrl+C</code>) and run <code>fbmarket login</code> — a browser
+            opens, you log in normally, press Enter, and the session is saved to your
+            own machine. Then start over at step 7.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">9</div>
+      <div>
+        <h3>Take a baseline</h3>
+        <p>
+          Press <strong>Check once now</strong> on the dashboard (or run
+          <code>fbmarket once</code> in a second terminal).
+        </p>
+        <p>
+          This first pass deliberately stays silent. It records every car
+          <em>already</em> listed so you don't get eighty notifications at once —
+          from here on you'll only hear about cars posted <em>after</em> this moment.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PHASE 4 ================= -->
+  <section class="phase">
+    <div class="phase-head">
+      <h2>Keep it watching</h2>
+      <span class="of">Steps 10–11</span>
+    </div>
+
+    <div class="step">
+      <div class="num">10</div>
+      <div>
+        <h3>Start monitoring</h3>
+        <p>
+          Hit <strong>Start monitoring</strong> on the dashboard. It now checks every
+          ten minutes and posts anything new to Discord.
+        </p>
+        <p>Or run it straight from the terminal without the UI:</p>
+        <pre><span class="p">$</span> fbmarket watch</pre>
+        <div class="note check">
+          <span class="lbl">Checkpoint</span>
+          <p>
+            The dashboard should show a green <strong>running</strong> pill, and the
+            <strong>Recently found</strong> panel fills up as cars appear. First real
+            alert usually lands within an hour or two, depending on how fast your
+            market moves.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num">11</div>
+      <div>
+        <h3>Make it survive a reboot</h3>
+        <p>
+          It only alerts while it's running. Closing the terminal stops it. To leave
+          it running permanently:
+        </p>
+        <div class="os">
+          <div class="os-row">
+            <div class="os-tag">Linux / Raspberry Pi</div>
+            <pre><span class="c"># edit the CHANGE_ME paths inside the file first</span>
+<span class="p">$</span> sudo cp deploy/fbmarket.service /etc/systemd/system/
+<span class="p">$</span> sudo systemctl daemon-reload
+<span class="p">$</span> sudo systemctl enable --now fbmarket
+<span class="p">$</span> journalctl -u fbmarket -f   <span class="c"># watch it work</span></pre>
+          </div>
+          <div class="os-row">
+            <div class="os-tag">macOS</div>
+            <pre><span class="c"># replace CHANGE_ME with your username inside the file first</span>
+<span class="p">$</span> cp deploy/com.fbmarket.monitor.plist ~/Library/LaunchAgents/
+<span class="p">$</span> launchctl load ~/Library/LaunchAgents/com.fbmarket.monitor.plist
+<span class="p">$</span> tail -f /tmp/fbmarket.log</pre>
+          </div>
+          <div class="os-row">
+            <div class="os-tag">Windows</div>
+            <pre><span class="c"># simplest: leave `fbmarket watch` running in a PowerShell window.</span>
+<span class="c"># or use Task Scheduler -> Create Task -> "run whether user is</span>
+<span class="c"># logged on or not", pointing at .venv\Scripts\fbmarket.exe watch</span></pre>
+          </div>
+        </div>
+        <div class="note">
+          <span class="lbl">Where to run it</span>
+          <p>
+            Use a machine on your home internet — a spare laptop, a mini PC, or a
+            Raspberry Pi. Facebook is far more suspicious of traffic from datacenter
+            IPs, so a home connection is the single biggest thing keeping this
+            working. That's why a cloud server is the wrong home for it.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TROUBLESHOOTING ================= -->
+  <section class="phase">
+    <div class="phase-head">
+      <h2>When something goes wrong</h2>
+      <span class="of">Reference</span>
+    </div>
+
+    <div class="trouble">
+      <details>
+        <summary>The test alert never arrived in Discord</summary>
+        <div class="details-body">
+          <p>
+            Run <code>fbmarket check</code> — the last line lists which channels are
+            on. If it says <code>NONE</code>, the <code>enabled: true</code> edit in
+            step 6 didn't save.
+          </p>
+          <p>
+            If it says <code>discord</code> but nothing arrives, the webhook URL in
+            <code>.env</code> is wrong or the webhook was deleted. Recreate it in
+            Discord and paste the new one.
+          </p>
+        </div>
+      </details>
+      <details>
+        <summary>“No listings were found on the page at all”</summary>
+        <div class="details-body">
+          <p>Usually a login wall. Run <code>fbmarket login</code> and retry.</p>
+          <p>If that doesn't fix it, capture what Facebook actually sent back. Add to
+          <code>config.yaml</code> under <code>browser:</code>:</p>
+          <pre>browser:
+  debug_dump_dir: ./debug
+  headless: false</pre>
+          <p>
+            Run <code>fbmarket once -v</code>, then inspect the saved page:
+            <code>fbmarket parse debug/&lt;file&gt;.html</code>. With
+            <code>headless: false</code> you'll also see the browser window and can
+            watch exactly where it gets stuck.
+          </p>
+        </div>
+      </details>
+      <details>
+        <summary>Listings are found, but nothing passes my filters</summary>
+        <div class="details-body">
+          <p>
+            Press <strong>Test</strong> and read the reason on each rejected car —
+            it names the exact rule. Most common cause is a mileage or year limit
+            catching cars whose title doesn't state a year.
+          </p>
+        </div>
+      </details>
+      <details>
+        <summary>I'm getting alerts about junk — salvage, parts, wanted ads</summary>
+        <div class="details-body">
+          <p>
+            Add those words to <strong>Reject if the listing mentions…</strong> in
+            the search form. It matches the title, subtitles and location, and is
+            case-insensitive.
+          </p>
+        </div>
+      </details>
+      <details>
+        <summary>I want to be re-alerted about cars it already found</summary>
+        <div class="details-body">
+          <p>
+            Press <strong>Reset</strong> next to the search. That clears its memory,
+            so the next check treats everything as new.
+          </p>
+        </div>
+      </details>
+      <details>
+        <summary>Facebook started blocking or challenging me</summary>
+        <div class="details-body">
+          <p>
+            Slow it down. In <code>config.yaml</code> raise
+            <code>poll.interval_seconds</code> to <code>1800</code> (every 30
+            minutes). For cars that's still far faster than any human refreshing,
+            and it's much less likely to draw attention.
+          </p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <footer>
+    Commands are the same on every platform once the environment is active.
+    Re-run <code>source .venv/bin/activate</code> in each new terminal.
+  </footer>
+
+</div>
