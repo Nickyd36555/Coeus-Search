@@ -200,9 +200,16 @@ bot_token: ${TELEGRAM_BOT_TOKEN}
 ```bash
 # .env
 TELEGRAM_BOT_TOKEN=123456:AA...
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 ```
 
-Both `config.yaml` and `.env` are gitignored. For Gmail, use an
+`.env` is loaded automatically at startup (from beside `config.yaml` and from
+the working directory). Anything already exported in your shell wins over the
+file. Both `config.yaml` and `.env` are gitignored.
+
+A Discord webhook URL **is** a credential — anyone holding it can post to that
+channel. Keep it in `.env`, never in `config.yaml`, and delete/recreate the
+webhook in Discord if it ever leaks. For Gmail, use an
 [App Password](https://support.google.com/accounts/answer/185833), not your
 account password.
 

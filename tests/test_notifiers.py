@@ -82,3 +82,35 @@ def test_disabled_placeholder_channel_is_not_checked():
         },
     }
     validate(config)  # must not raise
+
+
+def test_dotenv_is_loaded_without_overriding_real_env(tmp_path, monkeypatch):
+    from fbmarket.config import load_dotenv
+
+    env = tmp_path / ".env"
+    env.write_text(
+        "# comment\n"
+        "DISCORD_WEBHOOK_URL=https://example.test/hook\n"
+        "export QUOTED='shhh'\n"
+        "ALREADY_SET=from-file\n"
+        "\n"
+        "malformed line\n"
+    )
+    monkeypatch.setenv("ALREADY_SET", "from-shell")
+    monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)
+    monkeypatch.delenv("QUOTED", raising=False)
+
+    load_dotenv(env)
+
+    import os
+
+    assert os.environ["DISCORD_WEBHOOK_URL"] == "https://example.test/hook"
+    assert os.environ["QUOTED"] == "shhh"
+    # A real exported value must win over the file.
+    assert os.environ["ALREADY_SET"] == "from-shell"
+
+
+def test_missing_dotenv_is_not_an_error(tmp_path):
+    from fbmarket.config import load_dotenv
+
+    assert load_dotenv(tmp_path / "nope.env") == 0

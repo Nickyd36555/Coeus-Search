@@ -66,8 +66,36 @@ def find_config(path: str | None = None) -> Path:
     )
 
 
+def load_dotenv(path: str | Path = ".env") -> int:
+    """Load ``KEY=value`` pairs from a .env file into the environment.
+
+    Keeps secrets out of config.yaml without adding a dependency. Existing
+    environment variables win, so a real export always overrides the file.
+    """
+    env_path = Path(path).expanduser()
+    if not env_path.exists():
+        return 0
+    loaded = 0
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if key.startswith("export "):
+            key = key[len("export ") :].strip()
+        value = value.strip().strip("'\"")
+        if key and key not in os.environ:
+            os.environ[key] = value
+            loaded += 1
+    return loaded
+
+
 def load_config(path: str | None = None) -> dict[str, Any]:
     config_path = find_config(path)
+    # Look for .env beside the config first, then in the working directory.
+    load_dotenv(config_path.parent / ".env")
+    load_dotenv(".env")
     with open(config_path, "r", encoding="utf-8") as handle:
         raw = yaml.safe_load(handle) or {}
     if not isinstance(raw, dict):
