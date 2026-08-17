@@ -15,13 +15,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+web = ["Flask>=3.0"]
+dev = ["pytest>=8.0", "Flask>=3.0"]
 
 [project.scripts]
 fbmarket = "fbmarket.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["fbmarket*"]
+
+[tool.setuptools.package-data]
+fbmarket = ["templates/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

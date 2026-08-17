@@ -48,6 +48,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     reset.add_argument("--search", help="only reset this search (default: all)")
 
+    web = sub.add_parser("web", help="open the browser UI to manage searches")
+    web.add_argument("--host", default="127.0.0.1", help="bind address")
+    web.add_argument("--port", type=int, default=8765)
+    web.add_argument(
+        "--token",
+        help="require this token to access the UI (mandatory for non-local hosts)",
+    )
+
     parse = sub.add_parser(
         "parse",
         help="run the extractor over a saved HTML page (offline debugging)",
@@ -86,6 +94,17 @@ def _dispatch(args: argparse.Namespace) -> int:
 
     if args.command == "parse":
         return _cmd_parse(_try_load(args.config), args.path, args.search)
+
+    if args.command == "web":
+        try:
+            from .web import run_server
+        except ImportError as exc:
+            print(f"the web UI needs Flask: pip install 'fbmarket[web]'  ({exc})",
+                  file=sys.stderr)
+            return 2
+        load_config(args.config)  # fail fast on a broken config
+        run_server(args.config, host=args.host, port=args.port, token=args.token)
+        return 0
 
     config = load_config(args.config)
 

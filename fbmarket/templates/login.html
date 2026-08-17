@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="card" style="max-width:380px;margin:60px auto">
+  <h2>Access token</h2>
+  <form method="post">
+    <div class="field">
+      <label for="token">Enter the token this server was started with</label>
+      <input type="password" id="token" name="token" autofocus required>
+    </div>
+    <button class="btn primary" type="submit">Unlock</button>
+  </form>
+</div>
+{% endblock %}

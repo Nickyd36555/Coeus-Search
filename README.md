@@ -30,7 +30,22 @@ playwright install chromium        # one-time browser download
 cp config.example.yaml config.yaml
 ```
 
-Now edit `config.yaml` — see [Configuring your searches](#configuring-your-searches).
+### Then either use the web UI…
+
+```bash
+pip install -e ".[web]"
+fbmarket web            # opens on http://127.0.0.1:8765
+```
+
+Fill in a form to say what you're hunting — car, location, price range, years,
+mileage, words to reject. **Test** runs the search live and shows you every
+listing on the page with a verdict on each: *would alert you*, or *skipped —
+price 26,900 > 25,000*. That makes tuning filters a ten-second loop instead of
+guesswork. **Start monitoring** runs the watcher in the background.
+
+### …or edit the config directly
+
+See [Configuring your searches](#configuring-your-searches).
 
 ```bash
 fbmarket check          # validates config, prints the exact URLs it will watch
@@ -38,6 +53,10 @@ fbmarket test-notify    # sends a fake listing so you know alerts reach you
 fbmarket once           # first run: records what's listed now, stays quiet
 fbmarket watch          # runs forever, pings you on anything new
 ```
+
+Both edit the same `config.yaml`, so you can mix and match. One caveat: saving
+from the UI rewrites the file and **drops the explanatory comments** (a `.bak`
+copy is kept beside it).
 
 ### Getting alerts on your phone (fastest path)
 
@@ -184,7 +203,24 @@ tail -f /tmp/fbmarket.log
 | `fbmarket login` | Save a Facebook session |
 | `fbmarket status` | How many listings each search has recorded |
 | `fbmarket reset --search NAME` | Forget seen listings; next run re-alerts |
+| `fbmarket web` | Browser UI for managing searches |
 | `fbmarket parse page.html` | Run the extractor over a saved page (offline) |
+
+### Running the UI on a server
+
+It binds `127.0.0.1` by default. Exposing it to a network **requires** a token —
+the UI can read your searches and drive the scraper, so it refuses to start on a
+public interface without one:
+
+```bash
+fbmarket web --host 0.0.0.0 --port 8765 --token "$(openssl rand -hex 16)"
+```
+
+Better still, leave it on localhost and reach it over an SSH tunnel:
+
+```bash
+ssh -N -L 8765:127.0.0.1:8765 you@your-server
+```
 
 ---
 

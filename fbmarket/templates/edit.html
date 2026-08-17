@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block body %}
+<form method="post">
+  <div class="card">
+    <h2>{{ 'New search' if is_new else 'Edit search' }}</h2>
+
+    <div class="field">
+      <label for="name">Name this search</label>
+      <input type="text" id="name" name="name" required
+             value="{{ search.name or '' }}" placeholder="Tacoma under 25k">
+      <p class="muted">Just for you — it also keys which cars have already been seen.</p>
+    </div>
+
+    <div class="field">
+      <label for="query">What car are you looking for?</label>
+      <input type="text" id="query" name="query"
+             value="{{ search.query or '' }}" placeholder="Toyota Tacoma TRD">
+    </div>
+
+    <div class="field">
+      <label for="location">Location</label>
+      <input type="text" id="location" name="location"
+             value="{{ search.location or '' }}" placeholder="saltlakecity">
+      <p class="muted">
+        Open Marketplace in your browser and copy the bit after
+        <code>/marketplace/</code> — e.g. <code>saltlakecity</code> or
+        <code>109470862423276</code>.
+      </p>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label for="min_price">Min price ($)</label>
+        <input type="number" id="min_price" name="min_price" value="{{ search.min_price or '' }}">
+      </div>
+      <div class="field">
+        <label for="max_price">Max price ($)</label>
+        <input type="number" id="max_price" name="max_price" value="{{ search.max_price or '' }}">
+      </div>
+      <div class="field">
+        <label for="min_year">Earliest year</label>
+        <input type="number" id="min_year" name="min_year" value="{{ search.min_year or '' }}">
+      </div>
+      <div class="field">
+        <label for="max_year">Latest year</label>
+        <input type="number" id="max_year" name="max_year" value="{{ search.max_year or '' }}">
+      </div>
+      <div class="field">
+        <label for="max_mileage">Max mileage</label>
+        <input type="number" id="max_mileage" name="max_mileage" value="{{ search.max_mileage or '' }}">
+      </div>
+      <div class="field">
+        <label for="radius_km">Search radius (km)</label>
+        <input type="number" id="radius_km" name="radius_km" value="{{ search.radius_km or '' }}">
+      </div>
+      <div class="field">
+        <label for="transmission">Transmission</label>
+        <select id="transmission" name="transmission">
+          <option value="">Any</option>
+          <option value="automatic" {{ 'selected' if search.transmission == 'automatic' }}>Automatic</option>
+          <option value="manual" {{ 'selected' if search.transmission == 'manual' }}>Manual</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="days_since_listed">Listed within</label>
+        <select id="days_since_listed" name="days_since_listed">
+          <option value="">Any time</option>
+          <option value="1" {{ 'selected' if search.days_since_listed|string == '1' }}>Last 24 hours</option>
+          <option value="7" {{ 'selected' if search.days_since_listed|string == '7' }}>Last week</option>
+          <option value="30" {{ 'selected' if search.days_since_listed|string == '30' }}>Last month</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Fine-tuning</h2>
+    <p class="muted" style="margin-top:0">
+      Marketplace ignores its own filters more often than you'd think, so these
+      are re-checked on every listing. Comma-separated, case-insensitive.
+    </p>
+
+    <div class="field">
+      <label for="exclude">Reject if the listing mentions…</label>
+      <input type="text" id="exclude" name="exclude" value="{{ search.exclude or '' }}"
+             placeholder="salvage, rebuilt, parts only, no title, wanted">
+      <p class="muted">The main reason you'd get junk alerts. Keep this generous.</p>
+    </div>
+
+    <div class="field">
+      <label for="include_any">Must mention at least one of…</label>
+      <input type="text" id="include_any" name="include_any"
+             value="{{ search.include_any or '' }}" placeholder="tacoma, frontier">
+    </div>
+
+    <div class="field">
+      <label for="include_all">Must mention all of…</label>
+      <input type="text" id="include_all" name="include_all"
+             value="{{ search.include_all or '' }}" placeholder="4runner, trd">
+    </div>
+
+    <div class="field">
+      <label for="url">Or paste a full Marketplace URL (overrides everything above)</label>
+      <input type="text" id="url" name="url" value="{{ search.url or '' }}"
+             placeholder="https://www.facebook.com/marketplace/...">
+      <p class="muted">
+        Set the search up in your browser exactly how you want it, then paste the
+        address here. Useful for filters this form doesn't cover.
+      </p>
+    </div>
+
+    <div class="field">
+      <label>
+        <input type="checkbox" name="enabled" style="width:auto"
+               {{ 'checked' if search.get('enabled', True) }}> Actively watch this search
+      </label>
+    </div>
+
+    <button class="btn primary" type="submit">Save search</button>
+    <a class="btn" href="{{ url_for('index') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

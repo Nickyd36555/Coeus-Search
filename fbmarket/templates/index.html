@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block body %}
+
+<div class="card">
+  <h2>Monitoring</h2>
+  <p class="muted" style="margin-top:0">
+    {% if monitor.running %}
+      <span class="pill on">running</span>
+      Checking every {{ (interval / 60) | round(0, 'floor') | int }} min.
+    {% else %}
+      <span class="pill off">stopped</span>
+      Nothing is watching Marketplace right now.
+    {% endif %}
+    {% if monitor.last_run %}
+      &nbsp;Last cycle: {{ monitor.last_result or 'no results yet' }}.
+    {% endif %}
+  </p>
+  {% if monitor.last_error %}
+    <p class="flash error">Last cycle failed: {{ monitor.last_error }}</p>
+  {% endif %}
+  <div class="row-actions">
+    {% if monitor.running %}
+      <form class="inline" method="post" action="{{ url_for('monitor_control', action='stop') }}">
+        <button class="btn">Stop monitoring</button></form>
+    {% else %}
+      <form class="inline" method="post" action="{{ url_for('monitor_control', action='start') }}">
+        <button class="btn primary">Start monitoring</button></form>
+    {% endif %}
+    <form class="inline" method="post" action="{{ url_for('monitor_control', action='once') }}">
+      <button class="btn">Check once now</button></form>
+    <form class="inline" method="post" action="{{ url_for('notify_test') }}">
+      <button class="btn">Send test alert</button></form>
+  </div>
+  <p class="muted" style="margin-bottom:0">
+    Alerts go to:
+    {% if channels %}
+      {% for c in channels %}<span class="pill">{{ c.type }}</span> {% endfor %}
+    {% else %}
+      <span class="pill off">nothing configured</span>
+    {% endif %}
+  </p>
+</div>
+
+<div class="card">
+  <h2>What I'm watching for</h2>
+  {% if searches %}
+  <table>
+    <tr><th>Search</th><th>Looking for</th><th>Seen</th><th></th></tr>
+    {% for s in searches %}
+    <tr>
+      <td>
+        <strong>{{ s.name }}</strong><br>
+        <span class="pill {{ 'on' if s.get('enabled', True) else 'off' }}">
+          {{ 'on' if s.get('enabled', True) else 'paused' }}</span>
+      </td>
+      <td class="muted">
+        {{ s.query or 'any vehicle' }}
+        {% if s.min_price or s.max_price %}
+          <br>{{ '${:,}'.format(s.min_price) if s.min_price else 'any' }}–{{ '${:,}'.format(s.max_price) if s.max_price else 'any' }}
+        {% endif %}
+        {% if s.min_year or s.max_year %}<br>{{ s.min_year or 'any' }}–{{ s.max_year or 'now' }}{% endif %}
+        {% if s.max_mileage %}<br>under {{ '{:,}'.format(s.max_mileage) }} mi{% endif %}
+        {% if s.location %}<br>{{ s.location }}{% endif %}
+      </td>
+      <td>{{ counts.get(s.name, 0) }}</td>
+      <td>
+        <div class="row-actions">
+          <a class="btn sm" href="{{ url_for('test_search', name=s.name) }}">Test</a>
+          <a class="btn sm" href="{{ url_for('edit_search', name=s.name) }}">Edit</a>
+          <form class="inline" method="post" action="{{ url_for('toggle_search', name=s.name) }}">
+            <button class="btn sm">{{ 'Pause' if s.get('enabled', True) else 'Resume' }}</button></form>
+          <form class="inline" method="post" action="{{ url_for('reset_search', name=s.name) }}"
+                onsubmit="return confirm('Forget seen listings for {{ s.name }}? You may get re-alerted about cars you have already seen.')">
+            <button class="btn sm">Reset</button></form>
+          <form class="inline" method="post" action="{{ url_for('delete_search', name=s.name) }}"
+                onsubmit="return confirm('Delete {{ s.name }} permanently?')">
+            <button class="btn sm danger">Delete</button></form>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+    <p class="muted">No searches yet. <a href="{{ url_for('new_search') }}">Add one</a>.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Recently found</h2>
+  {% if recent %}
+    {% for r in recent %}
+    <div class="listing">
+      {% if r['image_url'] %}<img src="{{ r['image_url'] }}" alt="">
+      {% else %}<div class="thumb-placeholder"></div>{% endif %}
+      <div>
+        <a href="{{ r['url'] }}" target="_blank" rel="noopener">{{ r['title'] }}</a>
+        <div class="price">{{ r['price_text'] or ('$%s' % '{:,}'.format(r['price']) if r['price'] else 'No price') }}</div>
+        <div class="muted">
+          {% if r['mileage'] %}{{ '{:,}'.format(r['mileage']) }} mi &middot; {% endif %}
+          {% if r['location'] %}{{ r['location'] }} &middot; {% endif %}
+          {{ r['search'] }}
+          {% if r['notified'] %}&middot; <span class="pill on">alerted</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p class="muted">Nothing found yet. Start monitoring, or hit “Check once now”.</p>
+  {% endif %}
+</div>
+
+<p class="muted">Config file: <code>{{ config_path }}</code></p>
+{% endblock %}

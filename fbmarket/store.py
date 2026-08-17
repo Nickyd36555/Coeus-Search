@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
 import time
 from pathlib import Path
 
@@ -23,6 +24,14 @@ CREATE TABLE IF NOT EXISTS seen (
 CREATE INDEX IF NOT EXISTS idx_seen_first ON seen (first_seen);
 """
 
+# Added after the first release; applied to existing databases on open.
+MIGRATIONS = {
+    "location": "ALTER TABLE seen ADD COLUMN location TEXT",
+    "image_url": "ALTER TABLE seen ADD COLUMN image_url TEXT",
+    "price_text": "ALTER TABLE seen ADD COLUMN price_text TEXT",
+    "mileage": "ALTER TABLE seen ADD COLUMN mileage INTEGER",
+}
+
 
 class Store:
     """Dedupe state keyed by (search name, listing id)."""
@@ -30,10 +39,20 @@ class Store:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path).expanduser()
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(str(self.path))
+        # The web UI touches the store from request threads and the background
+        # monitor thread, so serialize access ourselves.
+        self.conn = sqlite3.connect(str(self.path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
+        self._lock = threading.RLock()
         self.conn.executescript(SCHEMA)
+        self._migrate()
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        existing = {row["name"] for row in self.conn.execute("PRAGMA table_info(seen)")}
+        for column, statement in MIGRATIONS.items():
+            if column not in existing:
+                self.conn.execute(statement)
 
     def close(self) -> None:
         self.conn.close()
@@ -85,24 +104,51 @@ class Store:
         """Insert or refresh listings, marking whether they were notified."""
         now = time.time()
         rows = [
-            (search, l.id, l.title, l.price, l.url, now, now, int(notified))
+            (
+                search, l.id, l.title, l.price, l.url, now, now, int(notified),
+                l.location, l.image_url, l.price_text, l.mileage,
+            )
             for l in listings
         ]
-        self.conn.executemany(
-            """
-            INSERT INTO seen
-                (search, listing_id, title, price, url, first_seen, last_seen, notified)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(search, listing_id) DO UPDATE SET
-                title = excluded.title,
-                price = excluded.price,
-                url = excluded.url,
-                last_seen = excluded.last_seen,
-                notified = seen.notified | excluded.notified
-            """,
-            rows,
-        )
-        self.conn.commit()
+        with self._lock:
+            self.conn.executemany(
+                """
+                INSERT INTO seen
+                    (search, listing_id, title, price, url, first_seen, last_seen,
+                     notified, location, image_url, price_text, mileage)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(search, listing_id) DO UPDATE SET
+                    title = excluded.title,
+                    price = excluded.price,
+                    url = excluded.url,
+                    last_seen = excluded.last_seen,
+                    location = excluded.location,
+                    image_url = excluded.image_url,
+                    price_text = excluded.price_text,
+                    mileage = excluded.mileage,
+                    notified = seen.notified | excluded.notified
+                """,
+                rows,
+            )
+            self.conn.commit()
+
+    def recent(self, limit: int = 50, search: str | None = None) -> list[sqlite3.Row]:
+        """Most recently discovered listings, newest first — the results feed."""
+        query = "SELECT * FROM seen"
+        params: list = []
+        if search:
+            query += " WHERE search = ?"
+            params.append(search)
+        query += " ORDER BY first_seen DESC LIMIT ?"
+        params.append(int(limit))
+        with self._lock:
+            return self.conn.execute(query, params).fetchall()
+
+    def delete_search(self, search: str) -> int:
+        with self._lock:
+            cur = self.conn.execute("DELETE FROM seen WHERE search = ?", (search,))
+            self.conn.commit()
+            return cur.rowcount
 
     def prune(self, older_than_days: int) -> int:
         """Drop rows not seen in a while to keep the DB small."""

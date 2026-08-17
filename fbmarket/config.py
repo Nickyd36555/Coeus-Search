@@ -107,6 +107,28 @@ def load_config(path: str | None = None) -> dict[str, Any]:
     return config
 
 
+def save_config(config: dict[str, Any], path: str | Path | None = None) -> Path:
+    """Write the config back to disk (used by the web UI).
+
+    Note: PyYAML does not preserve comments, so the explanatory comments in
+    config.example.yaml are lost once the UI saves. A timestamped backup of the
+    previous file is kept beside it.
+    """
+    target = Path(path or config.get("_path") or "config.yaml").expanduser()
+    payload = {k: v for k, v in config.items() if not k.startswith("_")}
+    validate(payload)
+
+    if target.exists():
+        backup = target.with_suffix(target.suffix + f".bak")
+        backup.write_text(target.read_text(encoding="utf-8"), encoding="utf-8")
+
+    tmp = target.with_suffix(target.suffix + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as handle:
+        yaml.safe_dump(payload, handle, sort_keys=False, allow_unicode=True)
+    tmp.replace(target)  # atomic, so a crash can't truncate your config
+    return target
+
+
 def validate(config: dict[str, Any]) -> None:
     searches = config.get("searches") or []
     if not isinstance(searches, list) or not searches:

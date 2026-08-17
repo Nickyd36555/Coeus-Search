@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="card">
+  <h2>Test run — {{ search.name }}</h2>
+  <p class="muted" style="margin-top:0">
+    A live check against Marketplace. Nothing is saved and no alerts are sent —
+    this is just to see what your filters would let through.
+  </p>
+  <p class="muted"><a href="{{ url }}" target="_blank" rel="noopener">Open this search on Facebook &rarr;</a></p>
+
+  {% if error %}
+    <div class="flash error">{{ error }}</div>
+  {% else %}
+    <p><strong>{{ passed }}</strong> of {{ rows | length }} listings on the page match your filters.</p>
+    {% if rows and passed == 0 %}
+      <div class="flash error">
+        Nothing passed. Your filters are probably too strict — check the reasons below.
+      </div>
+    {% endif %}
+    {% if not rows %}
+      <div class="flash error">
+        No listings were found on the page at all. Facebook may have shown a login
+        wall, or the search is too narrow. Try <code>fbmarket login</code>.
+      </div>
+    {% endif %}
+  {% endif %}
+
+  {% for row in rows %}
+    <div class="listing {{ '' if row.reason is none else 'rejected' }}">
+      {% if row.listing.image_url %}<img src="{{ row.listing.image_url }}" alt="">
+      {% else %}<div class="thumb-placeholder"></div>{% endif %}
+      <div>
+        <a href="{{ row.listing.url }}" target="_blank" rel="noopener">{{ row.listing.title }}</a>
+        <div class="price">{{ row.listing.price_text or 'No price' }}</div>
+        <div class="muted">
+          {% if row.listing.mileage %}{{ '{:,}'.format(row.listing.mileage) }} mi &middot; {% endif %}
+          {{ row.listing.location }}
+        </div>
+        {% if row.reason is none %}
+          <span class="pill on">would alert you</span>
+        {% else %}
+          <span class="pill off">skipped — {{ row.reason }}</span>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+
+  <p style="margin-top:16px">
+    <a class="btn" href="{{ url_for('edit_search', name=search.name) }}">Adjust filters</a>
+    <a class="btn" href="{{ url_for('index') }}">Back</a>
+  </p>
+</div>
+{% endblock %}

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}fbmarket{% endblock %}</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --ink: #16181d; --muted: #646b7a;
+    --line: #e3e6ec; --accent: #1877f2; --ok: #1a7f4b; --bad: #c0392b;
+    --chip: #eef1f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a; --panel: #1c1f26; --ink: #e9ecf2; --muted: #98a1b2;
+      --line: #2b303a; --accent: #4b9bff; --ok: #3ecf8e; --bad: #ff6b6b;
+      --chip: #252932;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header {
+    background: var(--panel); border-bottom: 1px solid var(--line);
+    padding: 14px 20px; display: flex; align-items: center; gap: 16px;
+    position: sticky; top: 0; z-index: 5;
+  }
+  header h1 { font-size: 17px; margin: 0; letter-spacing: -.01em; }
+  header a { color: var(--accent); text-decoration: none; font-size: 14px; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 20px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 18px; margin-bottom: 16px;
+  }
+  h2 { font-size: 15px; margin: 0 0 12px; letter-spacing: -.01em; }
+  .muted { color: var(--muted); font-size: 13px; }
+  a { color: var(--accent); }
+
+  .btn {
+    display: inline-block; border: 1px solid var(--line); background: var(--chip);
+    color: var(--ink); border-radius: 7px; padding: 7px 13px; font-size: 14px;
+    cursor: pointer; text-decoration: none; font-family: inherit;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.danger { color: var(--bad); }
+  .btn.sm { padding: 4px 9px; font-size: 13px; }
+  form.inline { display: inline; }
+
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+  input[type=text], input[type=number], input[type=password], select {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line);
+    border-radius: 7px; background: var(--bg); color: var(--ink);
+    font: inherit; font-size: 14px;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+  .field { margin-bottom: 14px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  td, th { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 12px; background: var(--chip); color: var(--muted);
+  }
+  .pill.on { background: rgba(62,207,142,.16); color: var(--ok); }
+  .pill.off { background: rgba(255,107,107,.14); color: var(--bad); }
+
+  .flash { padding: 11px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 14px; }
+  .flash.ok { background: rgba(62,207,142,.14); color: var(--ok); }
+  .flash.error { background: rgba(255,107,107,.14); color: var(--bad); }
+
+  .listing { display: flex; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .listing:last-child { border-bottom: 0; }
+  .listing img { width: 92px; height: 69px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+  .listing .price { font-weight: 650; }
+  .thumb-placeholder {
+    width: 92px; height: 69px; border-radius: 6px; background: var(--chip);
+    flex-shrink: 0;
+  }
+  .rejected { opacity: .5; }
+  code { background: var(--chip); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="{{ url_for('index') }}" style="color:inherit">fbmarket</a></h1>
+  <a href="{{ url_for('index') }}">Searches</a>
+  <a href="{{ url_for('new_search') }}">+ New search</a>
+</header>
+<div class="wrap">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block body %}{% endblock %}
+</div>
+</body>
+</html>
