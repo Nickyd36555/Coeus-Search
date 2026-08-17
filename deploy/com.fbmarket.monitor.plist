@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  macOS: keep the monitor running in the background.
+
+    cp deploy/com.fbmarket.monitor.plist ~/Library/LaunchAgents/
+    # replace CHANGE_ME with your macOS username, then:
+    launchctl load ~/Library/LaunchAgents/com.fbmarket.monitor.plist
+    tail -f /tmp/fbmarket.log
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.fbmarket.monitor</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/CHANGE_ME/Coeus-Search/.venv/bin/fbmarket</string>
+        <string>--config</string>
+        <string>config.yaml</string>
+        <string>watch</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/CHANGE_ME/Coeus-Search</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/fbmarket.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/fbmarket.err</string>
+</dict>
+</plist>

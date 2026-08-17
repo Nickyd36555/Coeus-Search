@@ -1,0 +1,136 @@
+# ---------------------------------------------------------------------------
+# fbmarket — copy this to config.yaml and edit.
+#   cp config.example.yaml config.yaml
+# config.yaml is gitignored. Use ${ENV_VAR} for anything secret.
+# ---------------------------------------------------------------------------
+
+poll:
+  interval_seconds: 600        # how often to check (600 = every 10 minutes)
+  jitter_seconds: 120          # randomize +/- this much so checks aren't metronomic
+  between_searches_seconds: [6, 16]
+
+browser:
+  headless: true
+  storage_state: ~/.config/fbmarket/state.json   # written by `fbmarket login`
+  scrolls: 3                   # more scrolls = deeper results, slower cycle
+  timeout_ms: 45000
+
+database: fbmarket.sqlite3
+prune_after_days: 45
+
+# First run records what's already listed WITHOUT pinging you, so you don't get
+# 80 alerts on startup. Flip to true if you want that initial dump.
+notify_on_first_run: false
+notify_price_drops: true
+max_notifications_per_cycle: 15
+
+# ---------------------------------------------------------------------------
+# Where to ping you. Enable as many as you like.
+# ---------------------------------------------------------------------------
+notify:
+  channels:
+    # --- ntfy: easiest phone push. Install the ntfy app, subscribe to a topic.
+    - type: ntfy
+      enabled: true
+      topic: coeus-cars-CHANGE-THIS-to-something-unguessable
+      server: https://ntfy.sh
+      priority: high
+
+    # --- Telegram: message @BotFather to create a bot, then message your bot
+    #     and read your chat id from https://api.telegram.org/bot<TOKEN>/getUpdates
+    - type: telegram
+      enabled: false
+      bot_token: ${TELEGRAM_BOT_TOKEN}
+      chat_id: ${TELEGRAM_CHAT_ID}
+
+    # --- Email digest. For Gmail use an App Password, not your login password.
+    - type: email
+      enabled: false
+      smtp_host: smtp.gmail.com
+      smtp_port: 587
+      username: nickyd36555@gmail.com
+      password: ${SMTP_APP_PASSWORD}
+      from: nickyd36555@gmail.com
+      to:
+        - nickyd36555@gmail.com
+
+    - type: discord
+      enabled: false
+      webhook_url: ${DISCORD_WEBHOOK_URL}
+
+    - type: webhook          # Slack, Zapier, Home Assistant, your own server
+      enabled: false
+      url: ${GENERIC_WEBHOOK_URL}
+      headers:
+        Authorization: Bearer ${GENERIC_WEBHOOK_TOKEN}
+
+    - type: desktop
+      enabled: false
+
+# ---------------------------------------------------------------------------
+# What to look for. One block per car you're hunting.
+#
+# location: the city slug or numeric id from a Marketplace URL. Browse to
+#   Marketplace in your browser and look at the address bar:
+#   facebook.com/marketplace/109470862423276/vehicles  -> location: 109470862423276
+#   facebook.com/marketplace/saltlakecity/vehicles     -> location: saltlakecity
+#
+# Facebook's own filters are applied server-side; `filters:` re-checks each
+# listing locally, because Marketplace routinely returns results that ignore
+# its own filters (and it has no filter at all for "no salvage title").
+# ---------------------------------------------------------------------------
+searches:
+  - name: Tacoma under 25k
+    enabled: true
+    location: saltlakecity
+    category: vehicles
+    query: Toyota Tacoma
+    min_price: 8000
+    max_price: 25000
+    min_year: 2014
+    max_mileage: 150000
+    radius_km: 100
+    transmission: automatic        # automatic | manual
+    car_type: car-truck            # car-truck | motorcycle | powersport | rv-camper | trailer | boat | commercial | other
+    days_since_listed: 7           # 1 | 7 | 30
+    filters:
+      min_price: 8000
+      max_price: 25000
+      min_year: 2014
+      max_mileage: 150000
+      include_any: [tacoma]
+      exclude:
+        - salvage
+        - rebuilt
+        - branded title
+        - parts only
+        - for parts
+        - as is
+        - needs engine
+        - no title
+        - lease
+        - wanted
+      skip_sold: true
+
+  - name: 4Runner TRD
+    enabled: false
+    location: saltlakecity
+    category: vehicles
+    query: 4Runner TRD
+    max_price: 35000
+    min_year: 2015
+    radius_km: 160
+    filters:
+      max_price: 35000
+      min_year: 2015
+      include_all: [4runner]
+      exclude: [salvage, rebuilt, wanted, parts]
+
+  # Any filter this tool doesn't model: set the search up in your browser,
+  # copy the URL, and paste it here. `url:` overrides everything above it.
+  - name: Hand-built URL example
+    enabled: false
+    url: https://www.facebook.com/marketplace/saltlakecity/search?query=miata&minPrice=3000
+    filters:
+      max_price: 12000
+      exclude: [salvage, parts]

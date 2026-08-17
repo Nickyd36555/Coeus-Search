@@ -1,0 +1,25 @@
+# Linux: run the monitor as a background service.
+#
+#   sudo cp deploy/fbmarket.service /etc/systemd/system/
+#   sudo edit the User/WorkingDirectory/ExecStart paths below
+#   sudo systemctl daemon-reload && sudo systemctl enable --now fbmarket
+#   journalctl -u fbmarket -f          # watch it work
+
+[Unit]
+Description=Facebook Marketplace monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=CHANGE_ME
+WorkingDirectory=/home/CHANGE_ME/Coeus-Search
+Environment=PYTHONUNBUFFERED=1
+# Secrets referenced as ${VAR} in config.yaml:
+EnvironmentFile=-/home/CHANGE_ME/Coeus-Search/.env
+ExecStart=/home/CHANGE_ME/Coeus-Search/.venv/bin/fbmarket --config config.yaml watch
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target
