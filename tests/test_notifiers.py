@@ -114,3 +114,28 @@ def test_missing_dotenv_is_not_an_error(tmp_path):
     from fbmarket.config import load_dotenv
 
     assert load_dotenv(tmp_path / "nope.env") == 0
+
+
+def test_windows_bom_files_still_parse(tmp_path, monkeypatch):
+    """Notepad and PowerShell's Out-File write UTF-8 with a BOM. Without
+    utf-8-sig the first key becomes "﻿KEY" and silently never resolves."""
+    import os
+
+    import yaml
+
+    from fbmarket.config import load_config, load_dotenv
+
+    env = tmp_path / ".env"
+    env.write_bytes(b"\xef\xbb\xbfDISCORD_WEBHOOK_URL=https://example.test/hook\n")
+    monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)
+    load_dotenv(env)
+    assert os.environ["DISCORD_WEBHOOK_URL"] == "https://example.test/hook"
+
+    config = {
+        "database": str(tmp_path / "db.sqlite3"),
+        "notify": {"channels": [{"type": "console"}]},
+        "searches": [{"name": "a", "location": "slc"}],
+    }
+    path = tmp_path / "config.yaml"
+    path.write_bytes(b"\xef\xbb\xbf" + yaml.safe_dump(config).encode())
+    assert load_config(str(path))["searches"][0]["name"] == "a"

@@ -76,7 +76,9 @@ def load_dotenv(path: str | Path = ".env") -> int:
     if not env_path.exists():
         return 0
     loaded = 0
-    for line in env_path.read_text(encoding="utf-8").splitlines():
+    # utf-8-sig strips the byte-order mark Notepad and PowerShell's Out-File
+    # write. Without it the first key parses as "﻿KEY" and never resolves.
+    for line in env_path.read_text(encoding="utf-8-sig").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
@@ -96,7 +98,8 @@ def load_config(path: str | None = None) -> dict[str, Any]:
     # Look for .env beside the config first, then in the working directory.
     load_dotenv(config_path.parent / ".env")
     load_dotenv(".env")
-    with open(config_path, "r", encoding="utf-8") as handle:
+    # utf-8-sig so a Notepad-saved config.yaml (which carries a BOM) parses.
+    with open(config_path, "r", encoding="utf-8-sig") as handle:
         raw = yaml.safe_load(handle) or {}
     if not isinstance(raw, dict):
         raise ConfigError(f"{config_path} must contain a YAML mapping at the top level")
@@ -120,7 +123,7 @@ def save_config(config: dict[str, Any], path: str | Path | None = None) -> Path:
 
     if target.exists():
         backup = target.with_suffix(target.suffix + f".bak")
-        backup.write_text(target.read_text(encoding="utf-8"), encoding="utf-8")
+        backup.write_text(target.read_text(encoding="utf-8-sig"), encoding="utf-8")
 
     tmp = target.with_suffix(target.suffix + ".tmp")
     with open(tmp, "w", encoding="utf-8") as handle:
