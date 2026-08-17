@@ -25,13 +25,15 @@ notify_price_drops: true
 max_notifications_per_cycle: 15
 
 # ---------------------------------------------------------------------------
-# Where to ping you. Enable as many as you like.
+# Where to ping you. Turn on at least one — they all start disabled.
+# `fbmarket check` will tell you if nothing is enabled.
 # ---------------------------------------------------------------------------
 notify:
   channels:
     # --- ntfy: easiest phone push. Install the ntfy app, subscribe to a topic.
+    #     Pick your own topic name — anyone who knows it can read your alerts.
     - type: ntfy
-      enabled: true
+      enabled: false
       topic: coeus-cars-CHANGE-THIS-to-something-unguessable
       server: https://ntfy.sh
       priority: high
