@@ -690,6 +690,26 @@ C:\Users\you&gt;         <span class="c">&lt;- Command Prompt. Wrong - close it.
         </div>
       </details>
       <details>
+        <summary>“Permission denied: ...\.venv\Scripts\python.exe”</summary>
+        <div class="details-body">
+          <p>
+            You ran <code>python -m venv .venv</code> while that environment was
+            already active, so Python was being asked to overwrite the copy of
+            itself it is currently running from. Nothing is broken.
+          </p>
+          <p>
+            If your prompt starts with <code>(.venv)</code>, the environment exists
+            and is active — skip straight to the <code>pip install</code> step.
+            Don't re-run earlier steps that already succeeded.
+          </p>
+          <p>To genuinely rebuild it, leave it first:</p>
+          <pre><span class="p">&gt;</span> deactivate
+<span class="p">&gt;</span> Remove-Item -Recurse -Force .venv
+<span class="p">&gt;</span> python -m venv .venv
+<span class="p">&gt;</span> .venv\Scripts\Activate.ps1</pre>
+        </div>
+      </details>
+      <details>
         <summary>“pip subprocess to install build dependencies did not run successfully”</summary>
         <div class="details-body">
           <p>
