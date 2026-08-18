@@ -655,6 +655,16 @@ C:\Users\you&gt;         <span class="c">&lt;- Command Prompt. Wrong - close it.
             that was already open cannot see programs installed after it started —
             this is the single most common reason a fresh install "doesn't work".
           </p>
+          <p>
+            If winget reports <em>"Found an existing package already installed"</em>
+            but <code>git</code> is still not recognized, it's installed and simply
+            missing from this window's PATH. Reload PATH without reopening:
+          </p>
+          <pre><span class="p">&gt;</span> $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")
+<span class="p">&gt;</span> git --version</pre>
+          <p>Still nothing? Point at it directly:</p>
+          <pre><span class="p">&gt;</span> $env:Path += ";C:\Program Files\Git\cmd"
+<span class="p">&gt;</span> git --version</pre>
           <p>No luck, or you'd rather skip Git entirely? Download the code as a zip:</p>
           <pre><span class="p">&gt;</span> cd $HOME
 <span class="p">&gt;</span> Invoke-WebRequest "https://github.com/Nickyd36555/Coeus-Search/archive/refs/heads/claude/facebook-marketplace-car-monitor-8dzoyc.zip" -OutFile coeus.zip
