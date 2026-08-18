@@ -139,3 +139,72 @@ def test_windows_bom_files_still_parse(tmp_path, monkeypatch):
     path = tmp_path / "config.yaml"
     path.write_bytes(b"\xef\xbb\xbf" + yaml.safe_dump(config).encode())
     assert load_config(str(path))["searches"][0]["name"] == "a"
+
+
+def _channel_config(tmp_path):
+    import yaml
+
+    config = {
+        "database": str(tmp_path / "db.sqlite3"),
+        "notify": {
+            "channels": [
+                {"type": "ntfy", "enabled": False, "topic": "mine"},
+                {"type": "discord", "enabled": False, "webhook_url": "x"},
+                {"type": "email", "enabled": False},
+            ]
+        },
+        "searches": [{"name": "a", "location": "slc"}],
+    }
+    path = tmp_path / "config.yaml"
+    path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    return path
+
+
+def _states(path):
+    import yaml
+
+    return {
+        c["type"]: c.get("enabled")
+        for c in yaml.safe_load(path.read_text())["notify"]["channels"]
+    }
+
+
+def test_channel_command_enables_only_the_named_channel(tmp_path):
+    from fbmarket.cli import main
+
+    path = _channel_config(tmp_path)
+    assert main(["-c", str(path), "channel", "discord", "--on"]) == 0
+
+    states = _states(path)
+    assert states["discord"] is True
+    # The other channels share the same `enabled: false` line; a blunt
+    # find-and-replace would switch them all on.
+    assert states["ntfy"] is False
+    assert states["email"] is False
+
+
+def test_channel_command_disables(tmp_path):
+    from fbmarket.cli import main
+
+    path = _channel_config(tmp_path)
+    main(["-c", str(path), "channel", "discord", "--on"])
+    assert main(["-c", str(path), "channel", "discord", "--off"]) == 0
+    assert _states(path)["discord"] is False
+
+
+def test_channel_command_rejects_unknown_channel(tmp_path, capsys):
+    from fbmarket.cli import main
+
+    path = _channel_config(tmp_path)
+    assert main(["-c", str(path), "channel", "telegram", "--on"]) == 2
+    assert "no 'telegram' channel" in capsys.readouterr().err
+
+
+def test_channel_command_requires_a_direction(tmp_path):
+    import pytest as _pytest
+
+    from fbmarket.cli import main
+
+    path = _channel_config(tmp_path)
+    with _pytest.raises(SystemExit):
+        main(["-c", str(path), "channel", "discord"])

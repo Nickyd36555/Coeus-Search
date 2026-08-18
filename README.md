@@ -197,6 +197,7 @@ tail -f /tmp/fbmarket.log
 |---|---|
 | `fbmarket check` | Validate config, print the exact search URLs |
 | `fbmarket test-notify` | Send a sample listing through every channel |
+| `fbmarket channel discord --on` | Turn a notification channel on or off |
 | `fbmarket once` | Run every search a single time |
 | `fbmarket once --dry-run` | Print matches to the console instead of notifying |
 | `fbmarket watch` | Poll forever |

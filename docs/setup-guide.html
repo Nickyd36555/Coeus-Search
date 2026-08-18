@@ -452,15 +452,11 @@ C:\Users\you&gt;         <span class="c">&lt;- Command Prompt. Wrong - close it.
       <div>
         <h3>Switch Discord on and prove it works</h3>
         <pre><span class="p">&gt;</span> Copy-Item config.example.yaml config.yaml
-<span class="p">&gt;</span> notepad config.yaml</pre>
+<span class="p">&gt;</span> fbmarket channel discord --on</pre>
         <p>
-          Find the <code>discord</code> block and change <code>enabled: false</code>
-          to <code>enabled: true</code>, then save and close Notepad:
+          That switches Discord on for you — no YAML editing required. Now validate
+          the config and fire a test alert:
         </p>
-        <pre>    - type: discord
-      enabled: <b>true</b>
-      webhook_url: ${DISCORD_WEBHOOK_URL}</pre>
-        <p>Now validate the config and fire a test alert:</p>
         <pre><span class="p">&gt;</span> fbmarket check
 <span class="p">&gt;</span> fbmarket test-notify</pre>
         <div class="note check">

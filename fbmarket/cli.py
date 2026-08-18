@@ -48,6 +48,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     reset.add_argument("--search", help="only reset this search (default: all)")
 
+    channel = sub.add_parser(
+        "channel", help="turn a notification channel on or off"
+    )
+    channel.add_argument(
+        "name", help="channel type, e.g. discord, ntfy, email, webhook, desktop"
+    )
+    group = channel.add_mutually_exclusive_group(required=True)
+    group.add_argument("--on", action="store_true", help="enable this channel")
+    group.add_argument("--off", action="store_true", help="disable this channel")
+
     web = sub.add_parser("web", help="open the browser UI to manage searches")
     web.add_argument("--host", default="127.0.0.1", help="bind address")
     web.add_argument("--port", type=int, default=8765)
@@ -108,6 +118,8 @@ def _dispatch(args: argparse.Namespace) -> int:
 
     config = load_config(args.config)
 
+    if args.command == "channel":
+        return _cmd_channel(config, args.name, enable=args.on)
     if args.command == "check":
         return _cmd_check(config)
     if args.command == "test-notify":
@@ -145,6 +157,35 @@ def _cmd_check(config: dict) -> int:
     print(f"\nnotification channels: {', '.join(c['type'] for c in enabled) or 'NONE'}")
     if not enabled:
         print("  warning: nothing is configured to ping you.")
+    return 0
+
+
+def _cmd_channel(config: dict, name: str, enable: bool) -> int:
+    """Flip one channel's `enabled` flag without hand-editing YAML."""
+    from .config import save_config
+
+    name = name.lower().strip()
+    channels = channel_specs(config)
+    match = next((c for c in channels if str(c.get("type", "")).lower() == name), None)
+    if match is None:
+        available = ", ".join(sorted({str(c.get("type")) for c in channels})) or "none"
+        print(
+            f"no {name!r} channel in the config. Available: {available}",
+            file=sys.stderr,
+        )
+        return 2
+
+    match["enabled"] = enable
+    try:
+        save_config(config)
+    except Exception as exc:  # noqa: BLE001 - report bad config plainly
+        print(f"could not save: {exc}", file=sys.stderr)
+        return 2
+
+    state = "on" if enable else "off"
+    print(f"{name} notifications turned {state}.")
+    if enable:
+        print("Test it with:  fbmarket test-notify")
     return 0
 
 
