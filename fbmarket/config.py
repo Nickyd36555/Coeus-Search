@@ -93,7 +93,7 @@ def load_dotenv(path: str | Path = ".env") -> int:
     return loaded
 
 
-def load_config(path: str | None = None) -> dict[str, Any]:
+def load_config(path: str | None = None, strict: bool = True) -> dict[str, Any]:
     config_path = find_config(path)
     # Look for .env beside the config first, then in the working directory.
     load_dotenv(config_path.parent / ".env")
@@ -106,7 +106,7 @@ def load_config(path: str | None = None) -> dict[str, Any]:
 
     config = _merge(DEFAULTS, raw)
     config["_path"] = str(config_path)
-    validate(config)
+    validate(config, strict=strict)
     return config
 
 
@@ -132,7 +132,13 @@ def save_config(config: dict[str, Any], path: str | Path | None = None) -> Path:
     return target
 
 
-def validate(config: dict[str, Any]) -> None:
+def validate(config: dict[str, Any], strict: bool = True) -> None:
+    """Check the config.
+
+    ``strict=False`` skips per-search URL checks so the editing UI can still
+    open on a config containing a broken search — otherwise a bad search locks
+    you out of the only tool that can repair it.
+    """
     searches = config.get("searches") or []
     if not isinstance(searches, list) or not searches:
         raise ConfigError("config needs at least one entry under 'searches'")
@@ -151,10 +157,11 @@ def validate(config: dict[str, Any]) -> None:
         search["name"] = name
         if search.get("enabled") is None:
             search["enabled"] = True
-        try:
-            build_search_url(search)
-        except ValueError as exc:
-            raise ConfigError(str(exc)) from exc
+        if strict:
+            try:
+                build_search_url(search)
+            except ValueError as exc:
+                raise ConfigError(str(exc)) from exc
 
     channels = (config.get("notify") or {}).get("channels") or []
     if not isinstance(channels, list):

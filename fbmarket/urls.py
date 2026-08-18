@@ -37,6 +37,29 @@ LIST_PARAMS = {
 DEFAULT_SORT = "creation_time_descend"
 
 
+def build_search_urls(search: dict[str, Any]) -> list[str]:
+    """Return every URL this search covers — one per configured location.
+
+    Marketplace has no nationwide search for local goods: results are always
+    anchored to a city plus a radius. Covering a wider area therefore means
+    querying several cities and merging the results, which is what a list of
+    ``locations`` does. Deduplication happens under the single search name, so
+    a car listed in the overlap between two cities is still reported once.
+    """
+    locations = search.get("locations")
+    if not locations:
+        return [build_search_url(search)]
+    if isinstance(locations, str):
+        locations = [p.strip() for p in locations.split(",") if p.strip()]
+
+    urls: list[str] = []
+    for location in locations:
+        variant = {k: v for k, v in search.items() if k != "locations"}
+        variant["location"] = location
+        urls.append(build_search_url(variant))
+    return urls
+
+
 def build_search_url(search: dict[str, Any]) -> str:
     """Return the Marketplace URL for one configured search.
 
@@ -50,6 +73,13 @@ def build_search_url(search: dict[str, Any]) -> str:
 
     location = str(search.get("location", "") or "").strip("/")
     if not location:
+        first = search.get("locations")
+        if isinstance(first, str):
+            first = [p.strip() for p in first.split(",") if p.strip()]
+        if first:
+            variant = {k: v for k, v in search.items() if k != "locations"}
+            variant["location"] = first[0]
+            return build_search_url(variant)
         raise ValueError(
             f"search {search.get('name', '<unnamed>')!r} needs either 'url' or 'location'"
         )

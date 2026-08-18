@@ -12,7 +12,7 @@ from typing import Any
 
 from .extract import extract_listings
 from .models import Listing
-from .urls import build_search_url
+from .urls import build_search_urls
 
 log = logging.getLogger(__name__)
 
@@ -138,8 +138,20 @@ class Scraper:
         if not self._context:
             raise RuntimeError("Scraper.start() must be called first")
 
-        url = build_search_url(search)
         name = str(search.get("name") or search.get("query") or "search")
+        urls = build_search_urls(search)
+        merged: dict[str, Listing] = {}
+        for index, url in enumerate(urls):
+            if index:
+                # Space out multi-city sweeps so one search isn't a burst.
+                self.pause_between_searches(3.0, 9.0)
+            for listing in self._fetch_one(url, name):
+                merged.setdefault(listing.id, listing)
+        if len(urls) > 1:
+            log.info("[%s] %d listing(s) across %d location(s)", name, len(merged), len(urls))
+        return list(merged.values())
+
+    def _fetch_one(self, url: str, name: str) -> list[Listing]:
         log.info("[%s] %s", name, url)
 
         page = self._context.new_page()

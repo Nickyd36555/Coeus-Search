@@ -96,7 +96,10 @@ def create_app(config_path: str | None = None, token: str | None = None) -> Flas
     app.config["ACCESS_TOKEN"] = token
 
     def current_config() -> dict[str, Any]:
-        return load_config(app.config["CONFIG_PATH"])
+        # Lenient: a search with a broken URL must not stop the UI loading,
+        # since the UI is how you fix it. Invalid searches are flagged in the
+        # page instead, and saving still validates strictly.
+        return load_config(app.config["CONFIG_PATH"], strict=False)
 
     def store_for(config: dict[str, Any]) -> Store:
         return Store(config.get("database", "fbmarket.sqlite3"))
@@ -327,6 +330,11 @@ def _find(config: dict[str, Any], name: str | None) -> dict[str, Any] | None:
 def _to_form(search: dict[str, Any]) -> dict[str, Any]:
     """Flatten a config entry into the flat shape the form expects."""
     form = dict(search)
+    if search.get("locations"):
+        places = search["locations"]
+        form["location"] = (
+            ", ".join(places) if isinstance(places, (list, tuple)) else str(places)
+        )
     filters = search.get("filters") or {}
     for key in LIST_FIELDS:
         value = filters.get(key) or []
@@ -361,7 +369,17 @@ def _from_form(form: Any) -> dict[str, Any]:
         except ValueError:
             raise ValueError(f"{key.replace('_', ' ')} must be a number (got {raw!r}).")
 
-    if not spec.get("url") and not spec.get("location"):
+    # One box, comma-separated: a single city stays `location`, several become
+    # `locations` and are swept in one pass under this search's name.
+    raw_location = (form.get("location") or "").strip()
+    places = [p.strip() for p in raw_location.split(",") if p.strip()]
+    spec.pop("location", None)
+    if len(places) == 1:
+        spec["location"] = places[0]
+    elif len(places) > 1:
+        spec["locations"] = places
+
+    if not spec.get("url") and not spec.get("location") and not spec.get("locations"):
         raise ValueError("Set a location (or paste a full Marketplace URL).")
 
     if spec.get("min_price") and spec.get("max_price"):

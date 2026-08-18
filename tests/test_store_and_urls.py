@@ -193,3 +193,44 @@ def test_real_search_urls_are_accepted():
         "https://www.facebook.com/marketplace/109470862423276/vehicles",
     ):
         assert build_search_url({"name": "ok", "url": url}).startswith(url)
+
+
+# -- multi-location sweeps -------------------------------------------------
+
+
+def test_multiple_locations_expand_to_one_url_each():
+    from fbmarket.urls import build_search_urls
+
+    urls = build_search_urls(
+        {"name": "camaro", "locations": ["portland", "seattle", "boise"],
+         "query": "Camaro", "max_price": 40000}
+    )
+    assert len(urls) == 3
+    paths = [urlparse(u).path for u in urls]
+    assert paths == [
+        "/marketplace/portland/vehicles",
+        "/marketplace/seattle/vehicles",
+        "/marketplace/boise/vehicles",
+    ]
+    # Filters must be carried onto every city, not just the first.
+    for u in urls:
+        assert parse_qs(urlparse(u).query)["maxPrice"] == ["40000"]
+
+
+def test_comma_separated_locations_accepted():
+    from fbmarket.urls import build_search_urls
+
+    assert len(build_search_urls({"name": "x", "locations": "portland, seattle "})) == 2
+
+
+def test_single_location_still_yields_one_url():
+    from fbmarket.urls import build_search_urls
+
+    urls = build_search_urls({"name": "x", "location": "portland", "query": "Camaro"})
+    assert len(urls) == 1
+
+
+def test_build_search_url_uses_first_location_for_display():
+    # `check` and the dashboard show one representative URL.
+    url = build_search_url({"name": "x", "locations": ["portland", "seattle"]})
+    assert "/marketplace/portland/" in url

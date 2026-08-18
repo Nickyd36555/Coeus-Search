@@ -20,11 +20,19 @@
     <div class="field">
       <label for="location">Location</label>
       <input type="text" id="location" name="location"
-             value="{{ search.location or '' }}" placeholder="saltlakecity">
+             value="{{ search.location or '' }}" placeholder="portland">
       <p class="muted">
         Open Marketplace in your browser and copy the bit after
-        <code>/marketplace/</code> — e.g. <code>saltlakecity</code> or
+        <code>/marketplace/</code> — e.g. <code>portland</code> or
         <code>109470862423276</code>.
+      </p>
+      <p class="muted">
+        <strong>Covering a wider area:</strong> Marketplace has no nationwide
+        search — every result is anchored to a city and radius. List several
+        cities separated by commas (<code>portland, seattle, boise</code>) and
+        each is checked in turn, with duplicates merged. Every extra city is
+        another page load per cycle, so a long list means a slower cycle and
+        more requests to Facebook.
       </p>
     </div>
 

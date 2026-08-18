@@ -122,7 +122,8 @@ def _dispatch(args: argparse.Namespace) -> int:
             print(f"the web UI needs Flask: pip install 'fbmarket[web]'  ({exc})",
                   file=sys.stderr)
             return 2
-        load_config(args.config)  # fail fast on a broken config
+        # Lenient so a broken search doesn't block the UI that repairs it.
+        load_config(args.config, strict=False)
         run_server(args.config, host=args.host, port=args.port, token=args.token)
         return 0
 
