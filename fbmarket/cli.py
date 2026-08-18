@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from pathlib import Path
 from datetime import datetime, timezone
 
 from . import __version__
@@ -57,6 +58,15 @@ def build_parser() -> argparse.ArgumentParser:
     group = channel.add_mutually_exclusive_group(required=True)
     group.add_argument("--on", action="store_true", help="enable this channel")
     group.add_argument("--off", action="store_true", help="disable this channel")
+
+    diagnose = sub.add_parser(
+        "diagnose",
+        help="scrape one search and report where each listing came from",
+    )
+    diagnose.add_argument("search", help="name of the search to inspect")
+    diagnose.add_argument(
+        "--save", metavar="FILE", help="also write the raw page HTML here"
+    )
 
     web = sub.add_parser("web", help="open the browser UI to manage searches")
     web.add_argument("--host", default="127.0.0.1", help="bind address")
@@ -118,6 +128,8 @@ def _dispatch(args: argparse.Namespace) -> int:
 
     config = load_config(args.config)
 
+    if args.command == "diagnose":
+        return _cmd_diagnose(config, args.search, args.save)
     if args.command == "channel":
         return _cmd_channel(config, args.name, enable=args.on)
     if args.command == "check":
@@ -157,6 +169,60 @@ def _cmd_check(config: dict) -> int:
     print(f"\nnotification channels: {', '.join(c['type'] for c in enabled) or 'NONE'}")
     if not enabled:
         print("  warning: nothing is configured to ping you.")
+    return 0
+
+
+def _cmd_diagnose(config: dict, name: str, save: str | None) -> int:
+    """Fetch one search and show which payload container each listing sits in.
+
+    When results look wrong, this distinguishes "Facebook returned the wrong
+    page" from "the extractor read the wrong part of the right page".
+    """
+    from .extract import describe_listings
+    from .scraper import Scraper
+
+    search = next(
+        (s for s in config.get("searches", []) if s.get("name") == name), None
+    )
+    if search is None:
+        names = ", ".join(s.get("name", "?") for s in config.get("searches", []))
+        print(f"no search named {name!r}. Available: {names}", file=sys.stderr)
+        return 2
+
+    url = build_search_url(search)
+    print(f"URL:  {url}\n")
+
+    scraper = Scraper(config.get("browser", {}))
+    scraper.start()
+    try:
+        page = scraper._context.new_page()  # noqa: SLF001 - diagnostic access
+        page.goto(url, wait_until="domcontentloaded", timeout=scraper.timeout_ms)
+        scraper._dismiss_cookie_banner(page)  # noqa: SLF001
+        page.wait_for_timeout(scraper.settle_ms)
+        page.mouse.wheel(0, 4000)
+        page.wait_for_timeout(scraper.scroll_pause_ms)
+        html = page.content()
+        page.close()
+    finally:
+        scraper.stop()
+
+    if save:
+        Path(save).expanduser().write_text(html, encoding="utf-8")
+        print(f"saved page HTML to {save}\n")
+
+    rows = describe_listings(html)
+    if not rows:
+        print("No listings found at all — likely a login wall or a changed payload.")
+        return 1
+
+    kept = sum(1 for _, in_results, _ in rows)
+    print(f"{len(rows)} listing(s) on the page; {kept} counted as search results.\n")
+    print(f"{'KEPT':<5} {'TITLE':<44} CONTAINER")
+    for title, in_results, container in rows[:40]:
+        mark = "yes" if in_results else "no"
+        print(f"{mark:<5} {title[:42]:<44} {container}")
+    if len(rows) > 40:
+        print(f"... and {len(rows) - 40} more")
     return 0
 
 

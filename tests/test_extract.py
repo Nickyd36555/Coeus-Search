@@ -172,3 +172,20 @@ def test_falls_back_to_all_listings_when_no_results_container():
     than returning everything — the keyword filters still apply downstream."""
     html = _page({"some_new_shape": {"items": [dict(LISTING_NODE, id="55")]}})
     assert [l.id for l in extract_listings(html)] == ["55"]
+
+
+def test_describe_listings_reports_container_for_each_listing():
+    from fbmarket.extract import describe_listings
+
+    data = {
+        "marketplace_search": {"feed_units": _edges(_item("1", "1968 Camaro SS", 42000))},
+        "marketplace_recommended_units": _edges(_item("90", "Chair", 30)),
+    }
+    html = _page({"require": [["ScheduledServerJS", "handle", None,
+                               [{"__bbox": {"result": {"data": data}}}]]]})
+
+    rows = {title: (keep, container) for title, keep, container in describe_listings(html)}
+    assert rows["1968 Camaro SS"][0] is True
+    assert "marketplace_search" in rows["1968 Camaro SS"][1]
+    assert rows["Chair"][0] is False
+    assert "recommended" in rows["Chair"][1]

@@ -54,7 +54,7 @@ def extract_listings(html: str, search_name: str = "") -> list[Listing]:
 
     fallback: dict[str, Listing] = {}
     for blob in _json_blobs(html):
-        for node, in_results in _walk_listing_nodes(blob):
+        for node, in_results, _path in _walk_listing_nodes(blob):
             listing = _node_to_listing(node, search_name)
             if not listing:
                 continue
@@ -86,8 +86,11 @@ def _json_blobs(html: str) -> Iterator[Any]:
 
 
 def _walk_listing_nodes(
-    node: Any, depth: int = 0, in_results: bool = False
-) -> Iterator[tuple[dict, bool]]:
+    node: Any,
+    depth: int = 0,
+    in_results: bool = False,
+    path: tuple[str, ...] = (),
+) -> Iterator[tuple[dict, bool, tuple[str, ...]]]:
     """Yield ``(listing_node, is_in_search_results)`` for every listing found.
 
     A results page carries more than the results: Facebook also embeds
@@ -100,16 +103,19 @@ def _walk_listing_nodes(
         return
     if isinstance(node, dict):
         if node.get("id") and any(node.get(key) for key in _TITLE_KEYS):
-            yield node, in_results
+            yield node, in_results, path
         for key, value in node.items():
             if isinstance(value, (dict, list)):
                 yield from _walk_listing_nodes(
-                    value, depth + 1, in_results or _is_results_key(key)
+                    value,
+                    depth + 1,
+                    in_results or _is_results_key(key),
+                    path + (str(key),),
                 )
     elif isinstance(node, list):
         for value in node:
             if isinstance(value, (dict, list)):
-                yield from _walk_listing_nodes(value, depth + 1, in_results)
+                yield from _walk_listing_nodes(value, depth + 1, in_results, path)
 
 
 def _is_results_key(key: Any) -> bool:
@@ -259,4 +265,31 @@ def _from_dom(html: str, search_name: str) -> list[Listing]:
                 price_text=price_text,
             )
         )
+    return out
+
+
+# Keys that are structural noise; hiding them makes a reported path readable.
+_NOISE_PATH_KEYS = {
+    "require", "__bbox", "result", "data", "edges", "node", "listing",
+    "ScheduledServerJS", "handle", "props", "rootView", "children", "0", "1",
+}
+
+
+def describe_listings(html: str) -> list[tuple[str, bool, str]]:
+    """Return ``(title, counted_as_result, container_path)`` for every listing.
+
+    Used by ``fbmarket diagnose`` to show which part of Facebook's payload each
+    listing came from, so the results-container names can be corrected against
+    a real page instead of guessed.
+    """
+    out: list[tuple[str, bool, str]] = []
+    seen: set[str] = set()
+    for blob in _json_blobs(html):
+        for node, in_results, path in _walk_listing_nodes(blob):
+            listing = _node_to_listing(node, "")
+            if not listing or listing.id in seen:
+                continue
+            seen.add(listing.id)
+            trail = [k for k in path if k not in _NOISE_PATH_KEYS and not k.isdigit()]
+            out.append((listing.title, in_results, " > ".join(trail[-4:]) or "(root)"))
     return out
