@@ -308,9 +308,10 @@ C:\Users\you&gt;         <span class="c">&lt;- Command Prompt. Wrong - close it.
         <pre><span class="p">&gt;</span> winget install Python.Python.3.12
 <span class="p">&gt;</span> winget install Git.Git</pre>
         <p>
-          <strong>Close PowerShell and open a new window</strong> afterwards — new
-          programs aren't visible to a window that was already open. Then re-run the
-          two version checks.
+          <strong>Close PowerShell and open a new window</strong> afterwards, then
+          re-run both version checks before continuing. A window that was already
+          open cannot see newly installed programs, so <code>git</code> will still
+          look missing until you do.
         </p>
         <div class="os">
           <div class="os-row">
@@ -641,6 +642,28 @@ C:\Users\you&gt;         <span class="c">&lt;- Command Prompt. Wrong - close it.
           <p>
             Also confirm your prompt starts with <code>PS</code>. In Command Prompt,
             <code>.\deploy\install-windows-task.ps1</code> cannot run at all.
+          </p>
+        </div>
+      </details>
+      <details>
+        <summary>“git is not recognized”</summary>
+        <div class="details-body">
+          <p>Git isn't installed yet, or the window predates its install:</p>
+          <pre><span class="p">&gt;</span> winget install Git.Git</pre>
+          <p>
+            Then <strong>close PowerShell and open a new window</strong>. A window
+            that was already open cannot see programs installed after it started —
+            this is the single most common reason a fresh install "doesn't work".
+          </p>
+          <p>No luck, or you'd rather skip Git entirely? Download the code as a zip:</p>
+          <pre><span class="p">&gt;</span> cd $HOME
+<span class="p">&gt;</span> Invoke-WebRequest "https://github.com/Nickyd36555/Coeus-Search/archive/refs/heads/claude/facebook-marketplace-car-monitor-8dzoyc.zip" -OutFile coeus.zip
+<span class="p">&gt;</span> Expand-Archive coeus.zip -DestinationPath .
+<span class="p">&gt;</span> Rename-Item "Coeus-Search-claude-facebook-marketplace-car-monitor-8dzoyc" Coeus-Search
+<span class="p">&gt;</span> cd Coeus-Search</pre>
+          <p>
+            That gets you the same files. You just won't be able to
+            <code>git pull</code> for updates later.
           </p>
         </div>
       </details>
