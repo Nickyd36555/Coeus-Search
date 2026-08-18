@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 BASE = "https://www.facebook.com/marketplace"
 
@@ -45,7 +45,8 @@ def build_search_url(search: dict[str, Any]) -> str:
     """
     explicit = search.get("url")
     if explicit:
-        return _force_sort(str(explicit), search.get("sort_by", DEFAULT_SORT))
+        url = validate_explicit_url(str(explicit))
+        return _force_sort(url, search.get("sort_by", DEFAULT_SORT))
 
     location = str(search.get("location", "") or "").strip("/")
     if not location:
@@ -86,3 +87,41 @@ def _force_sort(url: str, sort_by: str) -> str:
         return url
     joiner = "&" if "?" in url else "?"
     return f"{url}{joiner}sortBy={sort_by}"
+
+
+def validate_explicit_url(url: str) -> str:
+    """Reject URLs that are not actually a Marketplace search.
+
+    The Marketplace home page (facebook.com/marketplace/) is a valid URL and
+    loads fine, but it returns a generic "near you" feed of whatever is listed
+    locally — sofas, phones, houses — rather than search results. Silently
+    monitoring it produces a stream of alerts that ignore every filter, so it
+    is caught here instead.
+    """
+    url = url.strip()
+    parsed = urlparse(url)
+
+    if parsed.scheme not in ("http", "https") or "facebook.com" not in parsed.netloc:
+        raise ValueError(
+            f"{url!r} is not a Facebook URL. Paste the address bar contents from "
+            "a Marketplace search, or clear the field and use the location and "
+            "query boxes instead."
+        )
+
+    parts = [p for p in parsed.path.split("/") if p]
+    if not parts or parts[0] != "marketplace":
+        raise ValueError(
+            f"{url!r} is not a Marketplace URL — it should start with "
+            "facebook.com/marketplace/"
+        )
+
+    if len(parts) < 2:
+        raise ValueError(
+            "that is the Marketplace home page, not a search — it returns "
+            "whatever is listed near you, ignoring every filter. Browse to your "
+            "search on Facebook first, then copy the address bar, which should "
+            "look like facebook.com/marketplace/portland/vehicles?query=camaro "
+            "— or clear the URL box and fill in the location and car instead."
+        )
+
+    return url

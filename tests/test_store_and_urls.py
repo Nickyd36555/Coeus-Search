@@ -61,8 +61,11 @@ def test_explicit_url_wins_and_still_sorts_newest():
 
 
 def test_explicit_url_keeps_its_own_sort():
-    url = build_search_url({"url": "https://x.test/s?sortBy=price_ascend"})
+    url = build_search_url(
+        {"url": "https://www.facebook.com/marketplace/slc/search?sortBy=price_ascend"}
+    )
     assert url.count("sortBy") == 1
+    assert "price_ascend" in url
 
 
 def test_search_without_location_or_url_is_an_error():
@@ -161,3 +164,32 @@ def test_prune_drops_stale_rows(tmp_path):
         store.conn.commit()
         assert store.prune(30) == 1
         assert store.is_empty("cars")
+
+
+def test_marketplace_home_page_url_is_rejected():
+    """facebook.com/marketplace/ loads fine but returns a generic near-you
+    feed — sofas, phones, houses — ignoring every filter."""
+    for url in (
+        "https://www.facebook.com/marketplace/",
+        "https://www.facebook.com/marketplace",
+        "https://facebook.com/marketplace/?sortBy=creation_time_descend",
+    ):
+        with pytest.raises(ValueError, match="home page"):
+            build_search_url({"name": "bad", "url": url})
+
+
+def test_non_marketplace_urls_are_rejected():
+    with pytest.raises(ValueError, match="not a Facebook URL"):
+        build_search_url({"name": "bad", "url": "https://example.com/x"})
+    with pytest.raises(ValueError, match="not a Marketplace URL"):
+        build_search_url({"name": "bad", "url": "https://www.facebook.com/groups/1"})
+
+
+def test_real_search_urls_are_accepted():
+    for url in (
+        "https://www.facebook.com/marketplace/portland/vehicles?query=camaro",
+        "https://www.facebook.com/marketplace/search?query=miata",
+        "https://www.facebook.com/marketplace/category/vehicles",
+        "https://www.facebook.com/marketplace/109470862423276/vehicles",
+    ):
+        assert build_search_url({"name": "ok", "url": url}).startswith(url)

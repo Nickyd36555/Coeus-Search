@@ -61,6 +61,13 @@
         {% if s.min_year or s.max_year %}<br>{{ s.min_year or 'any' }}–{{ s.max_year or 'now' }}{% endif %}
         {% if s.max_mileage %}<br>under {{ '{:,}'.format(s.max_mileage) }} mi{% endif %}
         {% if s.location %}<br>{{ s.location }}{% endif %}
+        {% set resolved = urls.get(s.name, '') %}
+        {% if resolved.startswith('INVALID') %}
+          <br><span class="pill off">{{ resolved }}</span>
+        {% elif resolved %}
+          <br><a href="{{ resolved }}" target="_blank" rel="noopener"
+                 style="font-size:12px">what this actually searches &rarr;</a>
+        {% endif %}
       </td>
       <td>{{ counts.get(s.name, 0) }}</td>
       <td>

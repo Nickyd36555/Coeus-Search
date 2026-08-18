@@ -133,8 +133,18 @@ def create_app(config_path: str | None = None, token: str | None = None) -> Flas
             recent = store.recent(limit=40)
             counts = {row["search"]: row["total"] for row in store.stats()}
         channels = [c for c in channel_specs(config) if c.get("enabled", True)]
+        # Surfacing the resolved URL makes a misconfigured search obvious: a
+        # bare /marketplace/ URL returns the generic near-you feed, which looks
+        # like the scraper is broken rather than the search being wrong.
+        urls = {}
+        for s in config.get("searches", []):
+            try:
+                urls[s.get("name")] = build_search_url(s)
+            except ValueError as exc:
+                urls[s.get("name")] = f"INVALID — {exc}"
         return render_template(
             "index.html",
+            urls=urls,
             searches=config.get("searches", []),
             counts=counts,
             recent=recent,
