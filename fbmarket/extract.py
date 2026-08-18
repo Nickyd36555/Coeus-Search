@@ -28,16 +28,44 @@ _TAG_RE = re.compile(r"<[^>]+>")
 _TITLE_KEYS = ("marketplace_listing_title", "custom_title")
 _MAX_DEPTH = 60
 
+# Container keys whose contents are genuine search results.
+_RESULTS_CONTAINER_KEYS = (
+    "marketplace_search",
+    "search_results",
+    "feed_units",
+    "marketplace_feed_stories",
+)
+# ...unless the key also says these, which mark recommendation rails.
+_EXCLUDE_CONTAINER_KEYS = (
+    "related",
+    "recommend",
+    "suggested",
+    "similar",
+    "you_may",
+    "recently_viewed",
+    "saved",
+    "sponsored",
+)
+
 
 def extract_listings(html: str, search_name: str = "") -> list[Listing]:
     """Extract every listing on a results page, de-duplicated by listing id."""
     listings: dict[str, Listing] = {}
 
+    fallback: dict[str, Listing] = {}
     for blob in _json_blobs(html):
-        for node in _walk_listing_nodes(blob):
+        for node, in_results in _walk_listing_nodes(blob):
             listing = _node_to_listing(node, search_name)
-            if listing and listing.id not in listings:
-                listings[listing.id] = listing
+            if not listing:
+                continue
+            target = listings if in_results else fallback
+            target.setdefault(listing.id, listing)
+
+    if listings:
+        # Anything outside the results containers is a recommendation rail,
+        # not something the search asked for.
+        return list(listings.values())
+    listings = fallback
 
     if not listings:
         for listing in _from_dom(html, search_name):
@@ -57,20 +85,41 @@ def _json_blobs(html: str) -> Iterator[Any]:
             continue
 
 
-def _walk_listing_nodes(node: Any, depth: int = 0) -> Iterator[dict]:
-    """Yield every dict that looks like a Marketplace listing."""
+def _walk_listing_nodes(
+    node: Any, depth: int = 0, in_results: bool = False
+) -> Iterator[tuple[dict, bool]]:
+    """Yield ``(listing_node, is_in_search_results)`` for every listing found.
+
+    A results page carries more than the results: Facebook also embeds
+    "suggested for you" rails and a generic browse feed, all using the same
+    listing shape. Collecting everything indiscriminately means a search for a
+    car reports bookshelves and hot tubs. The flag records whether a node was
+    reached through a search-results container so the caller can prefer those.
+    """
     if depth > _MAX_DEPTH:
         return
     if isinstance(node, dict):
         if node.get("id") and any(node.get(key) for key in _TITLE_KEYS):
-            yield node
-        for value in node.values():
+            yield node, in_results
+        for key, value in node.items():
             if isinstance(value, (dict, list)):
-                yield from _walk_listing_nodes(value, depth + 1)
+                yield from _walk_listing_nodes(
+                    value, depth + 1, in_results or _is_results_key(key)
+                )
     elif isinstance(node, list):
         for value in node:
             if isinstance(value, (dict, list)):
-                yield from _walk_listing_nodes(value, depth + 1)
+                yield from _walk_listing_nodes(value, depth + 1, in_results)
+
+
+def _is_results_key(key: Any) -> bool:
+    """True for the container keys that hold actual search results."""
+    if not isinstance(key, str):
+        return False
+    lowered = key.lower()
+    if any(marker in lowered for marker in _EXCLUDE_CONTAINER_KEYS):
+        return False
+    return any(marker in lowered for marker in _RESULTS_CONTAINER_KEYS)
 
 
 def _node_to_listing(node: dict, search_name: str) -> Listing | None:

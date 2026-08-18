@@ -130,3 +130,45 @@ def test_listing_text_and_html_render():
     assert "82,000 mi" in text
     assert "marketplace/item/7" in text
     assert "<a href" in listing.to_html()
+
+
+def _item(listing_id, title, price):
+    return {
+        "id": listing_id,
+        "marketplace_listing_title": title,
+        "listing_price": {"amount": str(price), "formatted_amount": f"${price:,}"},
+    }
+
+
+def _edges(*items):
+    return {"edges": [{"node": {"listing": i}} for i in items]}
+
+
+def test_recommendation_rails_are_excluded_from_results():
+    """A results page also embeds "suggested for you" rails using the same
+    listing shape. A search for a car must not report bookshelves and pools.
+    """
+    data = {
+        "marketplace_search": {"feed_units": _edges(
+            _item("1", "1968 Chevrolet Camaro SS", 42000),
+            _item("2", "1969 Camaro SS 396", 55000),
+        )},
+        "marketplace_recommended_units": _edges(
+            _item("90", "4 Beds 2 Baths - House", 239000),
+            _item("91", "Book shelf, 5 shelves", 20),
+        ),
+        "related_searches_feed": _edges(_item("92", "Pool", 300)),
+        "suggested_for_you_feed_units": _edges(_item("93", "Sleeping bag", 25)),
+    }
+    html = _page({"require": [["ScheduledServerJS", "handle", None,
+                               [{"__bbox": {"result": {"data": data}}}]]]})
+
+    titles = sorted(l.title for l in extract_listings(html, "camaro"))
+    assert titles == ["1968 Chevrolet Camaro SS", "1969 Camaro SS 396"]
+
+
+def test_falls_back_to_all_listings_when_no_results_container():
+    """If Facebook renames its containers, returning nothing would be worse
+    than returning everything — the keyword filters still apply downstream."""
+    html = _page({"some_new_shape": {"items": [dict(LISTING_NODE, id="55")]}})
+    assert [l.id for l in extract_listings(html)] == ["55"]
