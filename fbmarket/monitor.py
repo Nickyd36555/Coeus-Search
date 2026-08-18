@@ -72,6 +72,11 @@ class Monitor:
                     scraper.pause_between_searches(low, high)
                 try:
                     self._run_search(scraper, search, result)
+                except ValueError as exc:
+                    result.errors += 1
+                    log.error(
+                        "[%s] skipped — %s", search.get("name", "?"), exc
+                    )
                 except LoginRequired as exc:
                     result.errors += 1
                     log.error("[%s] %s", search["name"], exc)

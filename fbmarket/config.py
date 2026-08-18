@@ -93,7 +93,14 @@ def load_dotenv(path: str | Path = ".env") -> int:
     return loaded
 
 
-def load_config(path: str | None = None, strict: bool = True) -> dict[str, Any]:
+def load_config(path: str | None = None, strict: bool = False) -> dict[str, Any]:
+    """Load config.yaml.
+
+    Search URLs are *not* validated by default: one malformed search must not
+    stop every command from running, including the UI that repairs it. Callers
+    surface per-search problems where they matter — `check` prints them, the
+    monitor logs and skips that search, the editor validates on save.
+    """
     config_path = find_config(path)
     # Look for .env beside the config first, then in the working directory.
     load_dotenv(config_path.parent / ".env")
@@ -110,7 +117,9 @@ def load_config(path: str | None = None, strict: bool = True) -> dict[str, Any]:
     return config
 
 
-def save_config(config: dict[str, Any], path: str | Path | None = None) -> Path:
+def save_config(
+    config: dict[str, Any], path: str | Path | None = None, strict: bool = True
+) -> Path:
     """Write the config back to disk (used by the web UI).
 
     Note: PyYAML does not preserve comments, so the explanatory comments in
@@ -119,7 +128,9 @@ def save_config(config: dict[str, Any], path: str | Path | None = None) -> Path:
     """
     target = Path(path or config.get("_path") or "config.yaml").expanduser()
     payload = {k: v for k, v in config.items() if not k.startswith("_")}
-    validate(payload)
+    # strict=False lets the UI save a corrected search even while an unrelated
+    # one is still broken; the caller validates the search actually being saved.
+    validate(payload, strict=strict)
 
     if target.exists():
         backup = target.with_suffix(target.suffix + f".bak")

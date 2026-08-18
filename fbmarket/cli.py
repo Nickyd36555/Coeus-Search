@@ -162,14 +162,22 @@ def _cmd_check(config: dict) -> int:
     print(f"config: {config.get('_path')}")
     print(f"database: {config.get('database')}")
     print(f"searches: {len(active)} enabled / {len(searches)} total\n")
+    problems = 0
     for search in searches:
         flag = " " if search.get("enabled", True) else "-"
-        print(f"[{flag}] {search['name']}\n    {build_search_url(search)}")
+        try:
+            detail = build_search_url(search)
+        except ValueError as exc:
+            detail = f"INVALID — {exc}"
+            problems += 1
+        print(f"[{flag}] {search['name']}\n    {detail}")
     channels = channel_specs(config)
     enabled = [c for c in channels if c.get("enabled", True)]
     print(f"\nnotification channels: {', '.join(c['type'] for c in enabled) or 'NONE'}")
     if not enabled:
         print("  warning: nothing is configured to ping you.")
+    if problems:
+        print(f"\n{problems} search(es) marked INVALID above will be skipped.")
     return 0
 
 

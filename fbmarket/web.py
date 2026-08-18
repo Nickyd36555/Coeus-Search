@@ -173,21 +173,42 @@ def create_app(config_path: str | None = None, token: str | None = None) -> Flas
             return _save(name)
         return render_template("edit.html", search=_to_form(search), is_new=False)
 
+    def _reject(message: str, original_name: str | None):
+        """Re-render the form with what was typed.
+
+        Redirecting instead would reload the form from disk and silently throw
+        away the user's edits — including the correction they just made, which
+        makes the same error reappear forever.
+        """
+        flash(message, "error")
+        return render_template(
+            "edit.html",
+            search=request.form.to_dict(),
+            is_new=original_name is None,
+        )
+
     def _save(original_name: str | None):
         config = current_config()
         try:
             spec = _from_form(request.form)
         except ValueError as exc:
-            flash(str(exc), "error")
-            return redirect(request.path)
+            return _reject(str(exc), original_name)
+
+        # Validate the search being saved, not the whole file, so an unrelated
+        # broken search cannot block this one.
+        try:
+            build_search_url(spec)
+        except ValueError as exc:
+            return _reject(str(exc), original_name)
 
         searches = config.setdefault("searches", [])
         existing = _find(config, original_name) if original_name else None
 
         clash = _find(config, spec["name"])
         if clash is not None and clash is not existing:
-            flash(f"A search named {spec['name']!r} already exists.", "error")
-            return redirect(request.path)
+            return _reject(
+                f"A search named {spec['name']!r} already exists.", original_name
+            )
 
         if existing is None:
             searches.append(spec)
@@ -204,10 +225,9 @@ def create_app(config_path: str | None = None, token: str | None = None) -> Flas
             existing.update(spec)
 
         try:
-            save_config(config)
+            save_config(config, strict=False)
         except Exception as exc:  # noqa: BLE001 - surface bad config in the UI
-            flash(f"Could not save: {exc}", "error")
-            return redirect(request.path)
+            return _reject(f"Could not save: {exc}", original_name)
         flash(f"Saved {spec['name']!r}.", "ok")
         return redirect(url_for("index"))
 

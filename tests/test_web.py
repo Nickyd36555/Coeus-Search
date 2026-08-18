@@ -239,3 +239,88 @@ def test_form_parsing_splits_keyword_lists():
 def test_url_only_search_needs_no_location():
     spec = _from_form({"name": "x", "url": "https://facebook.com/marketplace/x"})
     assert spec["url"].endswith("/marketplace/x")
+
+
+def test_failed_save_keeps_what_was_typed(client):
+    """A rejected save must re-render the user's input. Redirecting reloads
+    from disk, discarding the very correction they just made — so the same
+    error reappears no matter how many times they fix it."""
+    response = client.post(
+        "/search/Tacomas/edit",
+        data={
+            "name": "Tacomas",
+            "query": "1968 Camaro",
+            "location": "",          # missing -> rejected
+            "exclude": "salvage, parts",
+            "enabled": "on",
+        },
+    )
+    body = response.get_data(as_text=True)
+    assert response.status_code == 200          # re-rendered, not redirected
+    assert "Set a location" in body
+    assert "1968 Camaro" in body                # typed values survived
+    assert "salvage, parts" in body
+
+
+def test_clearing_a_bad_url_saves(client):
+    """The recovery path: a search saved with the Marketplace home page URL
+    must be fixable by emptying the URL box and giving a location."""
+    import yaml
+
+    config = yaml.safe_load(open(client.config_path))
+    config["searches"][0]["url"] = "https://www.facebook.com/marketplace/"
+    open(client.config_path, "w").write(yaml.safe_dump(config))
+
+    response = client.post(
+        "/search/Tacomas/edit",
+        data={"name": "Tacomas", "query": "1968 Camaro", "location": "portland",
+              "url": "", "include_any": "camaro", "enabled": "on"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+
+    saved = next(s for s in read_config(client)["searches"] if s["name"] == "Tacomas")
+    assert "url" not in saved
+    assert saved["location"] == "portland"
+
+
+def test_bad_url_is_rejected_with_a_usable_message(client):
+    response = client.post(
+        "/search/new",
+        data={"name": "Home feed", "location": "portland",
+              "url": "https://www.facebook.com/marketplace/", "enabled": "on"},
+    )
+    assert "home page" in response.get_data(as_text=True)
+    assert len(read_config(client)["searches"]) == 1
+
+
+def test_one_broken_search_does_not_block_saving_another(client):
+    """Saving validates the search being edited, not the whole file."""
+    import yaml
+
+    config = yaml.safe_load(open(client.config_path))
+    config["searches"].append(
+        {"name": "Broken", "url": "https://www.facebook.com/marketplace/", "enabled": True}
+    )
+    open(client.config_path, "w").write(yaml.safe_dump(config))
+
+    client.post(
+        "/search/Tacomas/edit",
+        data={"name": "Tacomas", "location": "portland", "query": "Camaro",
+              "enabled": "on"},
+        follow_redirects=True,
+    )
+    saved = next(s for s in read_config(client)["searches"] if s["name"] == "Tacomas")
+    assert saved["location"] == "portland"
+
+
+def test_several_locations_are_saved_as_a_sweep(client):
+    client.post(
+        "/search/Tacomas/edit",
+        data={"name": "Tacomas", "location": "portland, seattle, boise",
+              "query": "Camaro", "enabled": "on"},
+        follow_redirects=True,
+    )
+    saved = next(s for s in read_config(client)["searches"] if s["name"] == "Tacomas")
+    assert saved["locations"] == ["portland", "seattle", "boise"]
+    assert "location" not in saved
