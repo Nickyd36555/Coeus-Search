@@ -690,6 +690,35 @@ C:\Users\you&gt;         <span class="c">&lt;- Command Prompt. Wrong - close it.
         </div>
       </details>
       <details>
+        <summary>“pip subprocess to install build dependencies did not run successfully”</summary>
+        <div class="details-body">
+          <p>
+            Python 3.12 no longer ships setuptools inside a new virtual
+            environment, so pip tries to download it before building this project.
+            When that download fails, nothing installs — and the
+            <code>playwright</code> and <code>fbmarket</code> commands then look
+            missing purely because they were never created.
+          </p>
+          <p>Install the build tools yourself, then skip the isolated build:</p>
+          <pre><span class="p">&gt;</span> python -m pip install --upgrade pip setuptools wheel
+<span class="p">&gt;</span> pip install -e ".[web]" --no-build-isolation
+<span class="p">&gt;</span> playwright install chromium</pre>
+          <p>
+            If that still fails, skip installing the project altogether — grab just
+            the libraries and run it as a module:
+          </p>
+          <pre><span class="p">&gt;</span> pip install -r requirements.txt
+<span class="p">&gt;</span> python -m playwright install chromium
+<span class="p">&gt;</span> python -m fbmarket --version</pre>
+          <p>
+            Everything works identically this way; every <code>fbmarket ...</code>
+            command in this guide becomes
+            <code>python -m fbmarket ...</code> instead. Run them from the
+            <code>Coeus-Search</code> folder.
+          </p>
+        </div>
+      </details>
+      <details>
         <summary>“fbmarket is not recognized”</summary>
         <div class="details-body">
           <p>
